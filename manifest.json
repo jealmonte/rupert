@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "R.U.P/R.T.",
-  "version": "1.0.6",
-  "description": "AI-powered Personal Accessibility Assistant for Chrome",
+  "name": "Rupert AI Voice Assistant",
+  "version": "2.0.1",
+  "description": "AI-powered voice assistant for complete web navigation",
 
   "permissions": [
     "tabs",
@@ -22,42 +22,10 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Rupert Voice Assistant",
-    "default_icon": {
-      "16": "icon_16.png",
-      "32": "icon_32.png", 
-      "48": "icon_48.png",
-      "128": "icon_128.png"
-    }
+    "default_title": "Rupert AI Voice Assistant"
   },
-
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["config.js", "enhanced_command_processor.js", "enhanced_speech_recognition_config.js", "wake-word-detector.js", "content.js"],
-      "css": ["styles.css"],
-      "run_at": "document_idle"
-    }
-  ],
-
-  "icons": {
-    "16": "icon_16.png",
-    "32": "icon_32.png",
-    "48": "icon_48.png", 
-    "128": "icon_128.png"
-  },
-
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "config/env.json",
-        "*.png"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ],
 
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self';"
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
-}
+} 
