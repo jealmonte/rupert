@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rupert - Voice Assistant</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #FFFFFF;
+            color: #000000;
+            width: 420px;
+            min-width: 420px;
+            max-width: 450px;
+            min-height: 500px;
+            overflow-x: hidden;
+        }
+
+        .popup-header {
+            background: linear-gradient(135deg, #1B365D 0%, #2E5984 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .extension-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+        }
+
+        .connection-status {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #22C55E;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .popup-main {
+            padding: 24px;
+        }
+
+        .toggle-button {
+            width: 100%;
+            padding: 24px;
+            background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%);
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 18px;
+            font-weight: 600;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+            margin-bottom: 24px;
+        }
+
+        .toggle-button:hover {
+            background: linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%);
+            border-color: #1B365D;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-button.active {
+            background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+            border-color: #22C55E;
+            color: white;
+        }
+
+        .toggle-inner {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .toggle-icon {
+            font-size: 24px;
+        }
+
+        .toggle-switch {
+            width: 56px;
+            height: 28px;
+            background-color: #D1D5DB;
+            border-radius: 14px;
+            position: relative;
+            transition: background-color 0.25s ease;
+        }
+
+        .toggle-button.active .toggle-switch {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.25s ease;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .voice-status {
+            text-align: center;
+            padding: 24px;
+            background-color: #F9FAFB;
+            border-radius: 12px;
+            border: 1px solid #E5E7EB;
+            margin-bottom: 24px;
+        }
+
+        .status-primary {
+            font-size: 20px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .status-secondary {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        .settings-section {
+            border-top: 1px solid #E5E7EB;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+
+        .settings-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .permission-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .permission-item:last-child {
+            border-bottom: none;
+        }
+
+        .permission-label {
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .permission-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .permission-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #EF4444;
+        }
+
+        .permission-indicator.granted {
+            background-color: #22C55E;
+        }
+
+        .debug-toggle {
+            margin-top: 16px;
+            padding: 8px 0;
+            border-top: 1px solid #F3F4F6;
+        }
+
+        .debug-button {
+            background: none;
+            border: none;
+            color: #6B7280;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .debug-info {
+            background-color: #F8F9FA;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            margin-top: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #E5E7EB;
+            display: none;
+        }
+
+        .debug-info.visible {
+            display: block;
+        }
+
+        .error-message {
+            background-color: #FEE2E2;
+            border: 1px solid #FECACA;
+            color: #991B1B;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 16px 0;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background-color: #DCFCE7;
+            border: 1px solid #BBF7D0;
+            color: #166534;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 16px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="popup-header">
+        <h1 class="extension-name">Rupert Voice Assistant</h1>
+        <div class="connection-status">
+            <span class="status-dot" id="connection-dot"></span>
+            <span id="connection-text">Connecting...</span>
+        </div>
+    </div>
+
+    <div class="popup-main">
+        <!-- Main Toggle Button -->
+        <button id="main-toggle" class="toggle-button" type="button" aria-pressed="false">
+            <div class="toggle-inner">
+                <span class="toggle-icon">🎤</span>
+                <span class="toggle-text">Turn On</span>
+            </div>
+            <div class="toggle-switch">
+                <div class="toggle-slider" id="toggle-slider"></div>
+            </div>
+        </button>
+
+        <!-- Voice Status Display -->
+        <div class="voice-status">
+            <div class="status-primary" id="status-primary">Ready</div>
+            <div class="status-secondary" id="status-secondary">Click "Turn On" to activate voice assistant</div>
+        </div>
+
+        <!-- Message Container -->
+        <div id="message-container"></div>
+
+        <!-- Settings Section -->
+        <div class="settings-section">
+            <div class="settings-header">
+                <span>⚙️</span>
+                <span>Settings</span>
+            </div>
+
+            <div class="permission-item">
+                <span class="permission-label">Microphone Access</span>
+                <div class="permission-status">
+                    <span id="mic-status-text">Checking...</span>
+                    <div class="permission-indicator" id="mic-permission"></div>
+                </div>
+            </div>
+
+            <div class="permission-item">
+                <span class="permission-label">Tab Management</span>
+                <div class="permission-status">
+                    <span>Enabled</span>
+                    <div class="permission-indicator granted"></div>
+                </div>
+            </div>
+
+            <div class="permission-item">
+                <span class="permission-label">Content Scripts</span>
+                <div class="permission-status">
+                    <span>Enabled</span>
+                    <div class="permission-indicator granted"></div>
+                </div>
+            </div>
+
+            <!-- Debug Toggle -->
+            <div class="debug-toggle">
+                <button id="debug-button" class="debug-button">Show Debug Information</button>
+            </div>
+
+            <!-- Debug Information (Hidden by Default) -->
+            <div class="debug-info" id="debug-info">
+                <strong>Debug Information:</strong><br>
+                Popup loaded at: <span id="load-time"></span><br>
+                Extension version: 1.0.2<br>
+                <div id="debug-log"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript to fix CSP errors -->
+    <script src="popup.js"></script>
+</body>
+</html>
