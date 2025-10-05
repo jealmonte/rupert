@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Rupert Voice Assistant",
+  "name": "R.U.P/R.T.",
   "version": "1.0.3",
-  "description": "AI-powered voice assistant for Chrome with accessibility features",
+  "description": "AI-powered Personal Accessibility Assistant for Chrome",
 
   "permissions": [
     "tabs",
@@ -12,7 +12,8 @@
   ],
 
   "host_permissions": [
-    "<all_urls>"
+    "<all_urls>",
+    "https://generativelanguage.googleapis.com/*"
   ],
 
   "background": {
@@ -33,7 +34,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["config.js", "wake-word-detector.js", "content.js"],
       "run_at": "document_idle"
     }
   ],
@@ -47,7 +48,12 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["*.png"],
+      "resources": [
+        "permission.html", 
+        "permission.js", 
+        "config/env.json",
+        "*.png"
+      ],
       "matches": ["<all_urls>"]
     }
   ],
