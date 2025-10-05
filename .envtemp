@@ -12,7 +12,7 @@ EXTENSION_VERSION=1.0.0
 DEBUG_MODE=true
 
 # Wake Word Configuration
-WAKE_WORDS=hey rupert,rupert,hey robert
+WAKE_WORDS=hey rupert,rupert,hey robert,ripper,hey ripper
 LISTENING_TIMEOUT=30000
 LANGUAGE=en-US
 
