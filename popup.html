@@ -3,320 +3,512 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rupert - Voice Assistant</title>
+    <title>Rupert Voice Assistant</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+        * {
             margin: 0;
             padding: 0;
-            background-color: #FFFFFF;
-            color: #000000;
-            width: 420px;
-            min-width: 420px;
-            max-width: 450px;
-            min-height: 500px;
-            overflow-x: hidden;
+            box-sizing: border-box;
         }
 
-        .popup-header {
+        body {
+            width: 400px;
+            min-height: 600px;
             background: linear-gradient(135deg, #1B365D 0%, #2E5984 100%);
             color: white;
-            padding: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
             text-align: center;
+            backdrop-filter: blur(10px);
         }
 
-        .extension-name {
+        .header h1 {
             font-size: 24px;
-            font-weight: bold;
-            margin: 0 0 8px 0;
+            font-weight: 700;
+            margin-bottom: 5px;
         }
 
-        .connection-status {
+        .header p {
             font-size: 14px;
-            opacity: 0.9;
+            opacity: 0.8;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #22C55E;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
+        .main-content {
+            padding: 20px;
         }
 
-        .popup-main {
-            padding: 24px;
+        .permission-status {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
         }
 
-        .toggle-button {
-            width: 100%;
-            padding: 24px;
-            background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%);
-            border: 2px solid #E5E7EB;
-            border-radius: 12px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 18px;
-            font-weight: 600;
-            min-height: 80px;
+        .permission-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            transition: all 0.25s ease;
-            margin-bottom: 24px;
+            margin-bottom: 10px;
         }
 
-        .toggle-button:hover {
-            background: linear-gradient(135deg, #F3F4F6 0%, #F9FAFB 100%);
-            border-color: #1B365D;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        .permission-row:last-child {
+            margin-bottom: 0;
         }
 
-        .toggle-button.active {
-            background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
-            border-color: #22C55E;
-            color: white;
-        }
-
-        .toggle-inner {
+        .permission-label {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 8px;
+            font-size: 14px;
         }
 
-        .toggle-icon {
-            font-size: 24px;
+        .permission-status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #EF4444;
+            transition: all 0.3s ease;
+        }
+
+        .permission-status-indicator.granted {
+            background: #22C55E;
+        }
+
+        .permission-status-indicator.checking {
+            background: #F59E0B;
+            animation: pulse 2s infinite;
+        }
+
+        /* Microphone Testing Section */
+        .microphone-test {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .microphone-test.hidden {
+            display: none;
+        }
+
+        .microphone-test h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #ffffff;
+            text-align: center;
+        }
+
+        .test-status {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .test-status.listening {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .test-status.success {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .test-status.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .transcript-display {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            min-height: 80px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .transcript-display h4 {
+            font-size: 12px;
+            color: #22C55E;
+            margin-bottom: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+        }
+
+        .transcript-text {
+            color: #ffffff;
+            word-wrap: break-word;
+        }
+
+        .transcript-empty {
+            color: #888;
+            font-style: italic;
+        }
+
+        .confidence-display {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #EF4444 0%, #F59E0B 50%, #22C55E 100%);
+            width: 0%;
+            transition: all 0.3s ease;
+        }
+
+        .test-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .main-toggle {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .main-toggle.active {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+
+        .main-toggle.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .toggle-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .toggle-switch {
-            width: 56px;
-            height: 28px;
-            background-color: #D1D5DB;
-            border-radius: 14px;
             position: relative;
-            transition: background-color 0.25s ease;
+            width: 60px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            transition: all 0.3s ease;
         }
 
-        .toggle-button.active .toggle-switch {
-            background-color: rgba(255, 255, 255, 0.3);
+        .main-toggle.active .toggle-switch {
+            background: rgba(34, 197, 94, 0.8);
         }
 
         .toggle-slider {
             position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 24px;
-            height: 24px;
-            background-color: white;
+            top: 3px;
+            left: 3px;
+            width: 26px;
+            height: 26px;
+            background: white;
             border-radius: 50%;
-            transition: transform 0.25s ease;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
-        .voice-status {
-            text-align: center;
-            padding: 24px;
-            background-color: #F9FAFB;
-            border-radius: 12px;
-            border: 1px solid #E5E7EB;
-            margin-bottom: 24px;
+        .toggle-info {
+            flex: 1;
         }
 
-        .status-primary {
-            font-size: 20px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 8px;
-        }
-
-        .status-secondary {
-            font-size: 14px;
-            color: #6B7280;
-        }
-
-        .settings-section {
-            border-top: 1px solid #E5E7EB;
-            padding-top: 20px;
-            margin-top: 20px;
-        }
-
-        .settings-header {
+        .toggle-text {
             font-size: 16px;
             font-weight: 600;
-            color: #374151;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            margin-bottom: 5px;
         }
 
-        .permission-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #F3F4F6;
-        }
-
-        .permission-item:last-child {
-            border-bottom: none;
-        }
-
-        .permission-label {
-            font-size: 14px;
-            color: #374151;
-        }
-
-        .permission-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .toggle-description {
             font-size: 13px;
+            opacity: 0.8;
         }
 
-        .permission-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #EF4444;
-        }
-
-        .permission-indicator.granted {
-            background-color: #22C55E;
-        }
-
-        .debug-toggle {
-            margin-top: 16px;
-            padding: 8px 0;
-            border-top: 1px solid #F3F4F6;
-        }
-
-        .debug-button {
-            background: none;
-            border: none;
-            color: #6B7280;
-            font-size: 12px;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        .debug-info {
-            background-color: #F8F9FA;
-            padding: 12px;
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 20px;
             border-radius: 8px;
-            font-family: monospace;
-            font-size: 11px;
-            margin-top: 12px;
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #E5E7EB;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.primary {
+            background: rgba(34, 197, 94, 0.8);
+            border-color: rgba(34, 197, 94, 0.9);
+        }
+
+        .btn.primary:hover {
+            background: rgba(34, 197, 94, 0.9);
+        }
+
+        .btn.secondary {
+            background: rgba(59, 130, 246, 0.8);
+            border-color: rgba(59, 130, 246, 0.9);
+        }
+
+        .btn.secondary:hover {
+            background: rgba(59, 130, 246, 0.9);
+        }
+
+        .btn.danger {
+            background: rgba(239, 68, 68, 0.8);
+            border-color: rgba(239, 68, 68, 0.9);
+        }
+
+        .btn.danger:hover {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn.hidden {
             display: none;
         }
 
-        .debug-info.visible {
-            display: block;
-        }
-
-        .error-message {
-            background-color: #FEE2E2;
-            border: 1px solid #FECACA;
-            color: #991B1B;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 16px 0;
-            font-size: 14px;
+        .message-container {
+            margin-bottom: 15px;
+            min-height: 20px;
         }
 
         .success-message {
-            background-color: #DCFCE7;
-            border: 1px solid #BBF7D0;
-            color: #166534;
-            padding: 12px;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
             border-radius: 8px;
-            margin: 16px 0;
-            font-size: 14px;
+            padding: 10px 15px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .debug-section {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .debug-info {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .debug-info.visible {
+            max-height: 200px;
+        }
+
+        .debug-log {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            margin-top: 10px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .wake-word-highlight {
+            background: rgba(34, 197, 94, 0.3);
+            color: #22C55E;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div class="popup-header">
-        <h1 class="extension-name">Rupert Voice Assistant</h1>
-        <div class="connection-status">
-            <span class="status-dot" id="connection-dot"></span>
-            <span id="connection-text">Connecting...</span>
-        </div>
+    <div class="header">
+        <h1>🎤 Rupert</h1>
+        <p>Voice Assistant</p>
     </div>
 
-    <div class="popup-main">
-        <!-- Main Toggle Button -->
-        <button id="main-toggle" class="toggle-button" type="button" aria-pressed="false">
-            <div class="toggle-inner">
-                <span class="toggle-icon">🎤</span>
-                <span class="toggle-text">Turn On</span>
-            </div>
-            <div class="toggle-switch">
-                <div class="toggle-slider" id="toggle-slider"></div>
-            </div>
-        </button>
+    <div class="main-content">
+        <!-- Permission Status Section -->
+        <div class="permission-status">
+            <h3 style="font-size: 16px; margin-bottom: 15px;">Status</h3>
 
-        <!-- Voice Status Display -->
-        <div class="voice-status">
-            <div class="status-primary" id="status-primary">Ready</div>
-            <div class="status-secondary" id="status-secondary">Click "Turn On" to activate voice assistant</div>
+            <div class="permission-row">
+                <div class="permission-label">
+                    <span class="permission-status-indicator" id="mic-permission"></span>
+                    <span>Microphone</span>
+                </div>
+                <span id="mic-status-text">Checking...</span>
+            </div>
+
+            <div class="permission-row">
+                <div class="permission-label">
+                    <span class="permission-status-indicator" id="connection-dot"></span>
+                    <span>Service</span>
+                </div>
+                <span id="connection-text">Disconnected</span>
+            </div>
+        </div>
+
+        <!-- Microphone Testing Section -->
+        <div id="microphone-test" class="microphone-test hidden">
+            <h3>🎤 Microphone Test</h3>
+
+            <div id="test-status" class="test-status">
+                Ready to test microphone
+            </div>
+
+            <div class="transcript-display">
+                <h4>📝 Live Transcript:</h4>
+                <div id="transcript-text" class="transcript-text transcript-empty">
+                    Speak after clicking "Test Microphone" to see your words here...
+                </div>
+            </div>
+
+            <div class="confidence-display">
+                <div>Confidence Level: <span id="confidence-percentage">0%</span></div>
+                <div class="confidence-bar">
+                    <div id="confidence-fill" class="confidence-fill"></div>
+                </div>
+            </div>
+
+            <div class="test-buttons">
+                <button id="test-microphone" class="btn primary">
+                    <span>🎤</span> Test Microphone
+                </button>
+
+                <button id="clear-transcript" class="btn secondary">
+                    <span>🗑️</span> Clear Transcript
+                </button>
+            </div>
+        </div>
+
+        <!-- Permission Request Section -->
+        <div id="permission-request" class="microphone-test hidden">
+            <h3>🔐 Permission Required</h3>
+
+            <div class="test-status">
+                Rupert needs microphone access to function properly
+            </div>
+
+            <div class="test-buttons">
+                <button id="request-permission" class="btn primary">
+                    <span>🔓</span> Grant Microphone Access
+                </button>
+            </div>
         </div>
 
         <!-- Message Container -->
-        <div id="message-container"></div>
+        <div id="message-container" class="message-container"></div>
 
-        <!-- Settings Section -->
-        <div class="settings-section">
-            <div class="settings-header">
-                <span>⚙️</span>
-                <span>Settings</span>
-            </div>
-
-            <div class="permission-item">
-                <span class="permission-label">Microphone Access</span>
-                <div class="permission-status">
-                    <span id="mic-status-text">Checking...</span>
-                    <div class="permission-indicator" id="mic-permission"></div>
+        <!-- Main Toggle Section -->
+        <button id="main-toggle" class="main-toggle disabled" aria-pressed="false">
+            <div class="toggle-content">
+                <div class="toggle-switch">
+                    <div id="toggle-slider" class="toggle-slider"></div>
+                </div>
+                <div class="toggle-info">
+                    <div class="toggle-text">Turn On</div>
+                    <div class="toggle-description">Start voice recognition</div>
                 </div>
             </div>
+        </button>
 
-            <div class="permission-item">
-                <span class="permission-label">Tab Management</span>
-                <div class="permission-status">
-                    <span>Enabled</span>
-                    <div class="permission-indicator granted"></div>
+        <!-- Debug Section -->
+        <div class="debug-section">
+            <button id="debug-button" class="btn">Show Debug Information</button>
+            <div id="debug-info" class="debug-info">
+                <div style="margin-bottom: 10px;">
+                    <strong>Load Time:</strong> <span id="load-time">-</span>
                 </div>
-            </div>
-
-            <div class="permission-item">
-                <span class="permission-label">Content Scripts</span>
-                <div class="permission-status">
-                    <span>Enabled</span>
-                    <div class="permission-indicator granted"></div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Extension Version:</strong> <span id="extension-version">1.0.6</span>
                 </div>
-            </div>
-
-            <!-- Debug Toggle -->
-            <div class="debug-toggle">
-                <button id="debug-button" class="debug-button">Show Debug Information</button>
-            </div>
-
-            <!-- Debug Information (Hidden by Default) -->
-            <div class="debug-info" id="debug-info">
-                <strong>Debug Information:</strong><br>
-                Popup loaded at: <span id="load-time"></span><br>
-                Extension version: 1.0.2<br>
-                <div id="debug-log"></div>
+                <div id="debug-log" class="debug-log"></div>
             </div>
         </div>
     </div>
 
-    <!-- External JavaScript to fix CSP errors -->
     <script src="popup.js"></script>
 </body>
 </html>
