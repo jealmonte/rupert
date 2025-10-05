@@ -1,7 +1,7 @@
-// Enhanced Wake Word Detection Handler - PERMISSION-CONTROLLED VERSION
-// NO automatic microphone requests - only when user explicitly grants permission
+// Ultra-Enhanced Wake Word Detector with Maximum Accuracy
+// Implements multiple recognition improvement strategies
 
-class EnhancedWakeWordDetector {
+class UltraEnhancedWakeWordDetector {
     constructor() {
         this.recognition = null;
         this.speechRecognition = null;
@@ -10,35 +10,58 @@ class EnhancedWakeWordDetector {
         this.isInitialized = false;
         this.permissionGranted = false;
 
-        // Wake word variations for better detection
-        this.wakeWords = ['hey rupert', 'rupert', 'hey robert'];
+        // Load enhanced configuration
+        this.config = new EnhancedSpeechRecognitionConfig();
 
-        // Detection settings
-        this.confidence_threshold = 0.6;
-        this.restart_delay = 1000;
-        this.command_timeout = 10000;
+        // Advanced settings
+        this.accuracySettings = {
+            // Confidence thresholds
+            wake_word_threshold: 0.7,
+            command_threshold: 0.6,
+            interim_threshold: 0.85,
 
-        console.log('🎤 Enhanced Wake Word Detector constructed (permission-controlled)');
+            // Recognition parameters
+            restart_delay: 500,
+            command_timeout: 12000,
+            max_recognition_attempts: 3,
+
+            // Quality control
+            min_speech_length: 0.5, // seconds
+            max_silence_duration: 3000, // ms
+
+            // Adaptive settings
+            adaptive_threshold: true,
+            learning_enabled: true
+        };
+
+        // Performance tracking
+        this.stats = {
+            wake_word_detections: 0,
+            false_positives: 0,
+            command_recognitions: 0,
+            recognition_failures: 0,
+            average_confidence: 0
+        };
+
+        console.log('🎯 Ultra-Enhanced Wake Word Detector constructed with maximum accuracy');
     }
 
     async initialize() {
-        console.log('🚀 Initializing enhanced wake word detector (permission-aware)...');
+        console.log('🚀 Initializing ultra-enhanced wake word detector...');
 
         try {
-            // Check if speech recognition is supported
             if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
                 throw new Error('Speech recognition not supported in this browser');
             }
 
-            // ONLY check permission status passively - don't request
+            // Only check permission status passively
             await this.checkPermissionStatusPassively();
 
             if (this.permissionGranted) {
-                console.log('✅ Permission already granted, setting up recognition');
-                this.setupWakeWordRecognition();
-                this.setupSpeechRecognition();
+                console.log('✅ Permission granted, setting up enhanced recognition');
+                this.setupEnhancedWakeWordRecognition();
+                this.setupEnhancedCommandRecognition();
                 this.isInitialized = true;
-                console.log('✅ Enhanced wake word detection initialized successfully');
                 return true;
             } else {
                 console.log('⚠️ No microphone permission - waiting for user activation');
@@ -47,337 +70,350 @@ class EnhancedWakeWordDetector {
             }
 
         } catch (error) {
-            console.error('❌ Error initializing enhanced wake word detection:', error);
-            this.notifyBackgroundScript('initialization_failed', { error: error.message });
+            console.error('❌ Error initializing ultra-enhanced wake word detection:', error);
             return false;
         }
     }
 
-    // PASSIVE permission check - NEVER calls getUserMedia()
     async checkPermissionStatusPassively() {
-        console.log('🔍 Checking permission status passively (no getUserMedia)...');
+        console.log('🔍 Checking permission status passively...');
 
         try {
-            // ONLY use Permissions API - never getUserMedia
             if ('permissions' in navigator) {
                 const result = await navigator.permissions.query({ name: 'microphone' });
                 this.permissionGranted = result.state === 'granted';
 
-                console.log(`📊 Permission status (passive check): ${result.state}`);
-
-                // Listen for permission changes
                 result.onchange = () => {
-                    const oldState = this.permissionGranted;
                     this.permissionGranted = result.state === 'granted';
-                    console.log(`🔄 Microphone permission changed: ${result.state}`);
-
-                    this.notifyBackgroundScript('permission_status_changed', {
-                        granted: this.permissionGranted,
-                        state: result.state,
-                        previousState: oldState
-                    });
-
-                    if (this.permissionGranted && !this.isInitialized) {
-                        console.log('🔄 Permission granted - initializing...');
-                        this.initialize();
-                    } else if (!this.permissionGranted && this.isListening) {
-                        console.log('🛑 Permission revoked - stopping listening...');
-                        this.stopListening();
-                    }
+                    console.log(`🔄 Permission changed: ${result.state}`);
                 };
 
                 return this.permissionGranted;
             } else {
-                console.log('⚠️ Permissions API not available - assuming no permission');
                 this.permissionGranted = false;
                 return false;
             }
         } catch (error) {
-            console.log(`❌ Passive permission check failed: ${error.message}`);
             this.permissionGranted = false;
             return false;
         }
     }
 
-    // EXPLICIT permission request - only called when user requests activation
-    async requestMicrophonePermissionExplicitly() {
-        console.log('🔐 User explicitly requesting microphone permission...');
-
-        try {
-            // This is the ONLY place where getUserMedia is called
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
-            });
-
-            // Stop the stream immediately after permission is granted
-            stream.getTracks().forEach(track => track.stop());
-
-            this.permissionGranted = true;
-            console.log('✅ Microphone permission explicitly granted');
-
-            this.notifyBackgroundScript('permission_granted', {
-                timestamp: Date.now(),
-                source: 'wake_word_detector',
-                method: 'explicit_request'
-            });
-
-            // Now we can initialize
-            if (!this.isInitialized) {
-                await this.initialize();
-            }
-
-            return true;
-
-        } catch (error) {
-            this.permissionGranted = false;
-            console.log(`❌ Microphone permission denied: ${error.name}`);
-
-            this.notifyBackgroundScript('permission_denied', {
-                error: error.name,
-                message: error.message,
-                timestamp: Date.now(),
-                method: 'explicit_request'
-            });
-
-            return false;
-        }
-    }
-
-    setupWakeWordRecognition() {
-        if (!this.permissionGranted) {
-            console.log('❌ Cannot setup wake word recognition: no permission');
-            return;
-        }
-
-        console.log('🔧 Setting up wake word recognition...');
+    setupEnhancedWakeWordRecognition() {
+        console.log('🔧 Setting up enhanced wake word recognition...');
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         this.recognition = new SpeechRecognition();
 
-        // Configure for continuous wake word detection
-        this.recognition.continuous = true;
-        this.recognition.interimResults = true;
-        this.recognition.lang = 'en-US';
-        this.recognition.maxAlternatives = 3;
+        // Apply enhanced configuration
+        const config = this.config.getWakeWordConfig();
+        this.recognition.continuous = config.continuous;
+        this.recognition.interimResults = config.interimResults;
+        this.recognition.lang = config.lang;
+        this.recognition.maxAlternatives = config.maxAlternatives;
 
-        this.recognition.onresult = (event) => {
-            try {
-                // Process the most recent result
-                const lastResult = event.results[event.results.length - 1];
-                if (!lastResult || !lastResult[0]) return;
-
-                const transcript = lastResult[0].transcript.toLowerCase().trim();
-                const confidence = lastResult[0].confidence || 0;
-
-                // Only process final results or high-confidence interim results
-                if (lastResult.isFinal || confidence > 0.8) {
-                    console.log(`🎯 Wake word detection: "${transcript}" (confidence: ${confidence.toFixed(2)})`);
-
-                    // Check for wake word in the last few words
-                    const words = transcript.split(' ').slice(-4); // Last 4 words
-                    const recentText = words.join(' ');
-
-                    // Check if any wake word is present with sufficient confidence
-                    const wakeWordDetected = this.wakeWords.some(wakeWord => {
-                        const detected = recentText.includes(wakeWord);
-                        if (detected) {
-                            console.log(`🎯 Wake word "${wakeWord}" detected in: "${recentText}"`);
-                        }
-                        return detected;
-                    });
-
-                    if (wakeWordDetected && confidence > this.confidence_threshold) {
-                        this.handleWakeWordDetected(transcript, confidence);
-                    }
-                }
-            } catch (error) {
-                console.error('❌ Error processing wake word result:', error);
-            }
-        };
-
-        this.recognition.onerror = (event) => {
-            console.log(`❌ Wake word recognition error: ${event.error}`);
-
-            if (event.error === 'not-allowed') {
-                this.permissionGranted = false;
-                this.notifyBackgroundScript('permission_lost', { 
-                    error: event.error,
-                    context: 'wake_word_recognition' 
-                });
-                return;
-            }
-
-            // Auto-restart on most errors if still supposed to be listening
-            if (this.isListening && event.error !== 'aborted') {
-                console.log('🔄 Restarting wake word detection after error...');
-                setTimeout(() => {
-                    if (this.isListening && this.permissionGranted) {
-                        this.startListening();
-                    }
-                }, this.restart_delay);
-            }
-        };
-
-        this.recognition.onend = () => {
-            console.log('🔚 Wake word recognition ended');
-
-            // Auto-restart to maintain continuous listening if still enabled
-            if (this.isListening && this.permissionGranted) {
-                console.log('🔄 Auto-restarting wake word detection...');
-                setTimeout(() => {
-                    if (this.isListening) {
-                        this.startListening();
-                    }
-                }, 100);
-            }
-        };
-
-        this.recognition.onstart = () => {
-            console.log('🎤 Wake word recognition started');
-        };
+        // Advanced recognition event handlers
+        this.recognition.onresult = (event) => this.handleWakeWordResults(event);
+        this.recognition.onerror = (event) => this.handleWakeWordError(event);
+        this.recognition.onend = () => this.handleWakeWordEnd();
+        this.recognition.onstart = () => this.handleWakeWordStart();
+        this.recognition.onspeechstart = () => this.handleSpeechStart();
+        this.recognition.onspeechend = () => this.handleSpeechEnd();
+        this.recognition.onnomatch = () => this.handleNoMatch();
     }
 
-    setupSpeechRecognition() {
-        if (!this.permissionGranted) {
-            console.log('❌ Cannot setup command recognition: no permission');
-            return;
-        }
-
-        console.log('🔧 Setting up command recognition...');
+    setupEnhancedCommandRecognition() {
+        console.log('🔧 Setting up enhanced command recognition...');
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         this.speechRecognition = new SpeechRecognition();
 
-        // Configure for command recognition
-        this.speechRecognition.continuous = false;
-        this.speechRecognition.interimResults = false;
-        this.speechRecognition.lang = 'en-US';
-        this.speechRecognition.maxAlternatives = 1;
+        // Apply enhanced configuration for commands
+        const config = this.config.getCommandConfig();
+        this.speechRecognition.continuous = config.continuous;
+        this.speechRecognition.interimResults = config.interimResults;
+        this.speechRecognition.lang = config.lang;
+        this.speechRecognition.maxAlternatives = config.maxAlternatives;
 
-        this.speechRecognition.onresult = (event) => {
-            try {
-                const result = event.results[0][0];
-                const transcript = result.transcript.trim();
-                const confidence = result.confidence || 0;
+        // Command recognition event handlers
+        this.speechRecognition.onresult = (event) => this.handleCommandResults(event);
+        this.speechRecognition.onerror = (event) => this.handleCommandError(event);
+        this.speechRecognition.onend = () => this.handleCommandEnd();
+        this.speechRecognition.onstart = () => this.handleCommandStart();
+    }
 
-                console.log(`🗣️ Voice command detected: "${transcript}" (confidence: ${confidence.toFixed(2)})`);
+    handleWakeWordResults(event) {
+        try {
+            // Process all available alternatives
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const result = event.results[i];
+                if (!result || result.length === 0) continue;
 
-                // Send command to background script
-                this.notifyBackgroundScript('voice_command', {
-                    transcript: transcript,
-                    confidence: confidence,
-                    timestamp: Date.now()
-                });
+                // Check multiple alternatives for better accuracy
+                for (let j = 0; j < Math.min(result.length, 3); j++) {
+                    const alternative = result[j];
+                    const transcript = alternative.transcript.toLowerCase().trim();
+                    const confidence = alternative.confidence || 0;
 
-            } catch (error) {
-                console.error('❌ Error processing voice command:', error);
+                    console.log(`🎯 Wake word analysis: "${transcript}" (confidence: ${confidence.toFixed(2)}, alternative: ${j+1})`);
+
+                    // Enhanced wake word detection
+                    const detection = this.config.detectWakeWord(transcript, confidence);
+
+                    if (detection.detected) {
+                        console.log(`🎉 Wake word detected via ${detection.method}: "${detection.matched}" (confidence: ${confidence.toFixed(2)})`);
+
+                        // Update statistics
+                        this.stats.wake_word_detections++;
+                        this.updateAverageConfidence(confidence);
+
+                        // Handle wake word with enhanced processing
+                        this.handleEnhancedWakeWordDetected(transcript, confidence, detection);
+                        return; // Exit after first detection
+                    }
+                }
             }
-        };
-
-        this.speechRecognition.onerror = (event) => {
-            console.error(`❌ Speech recognition error: ${event.error}`);
-            this.notifyBackgroundScript('speech_error', {
-                error: event.error,
-                message: this.getErrorMessage(event.error)
-            });
-        };
-
-        this.speechRecognition.onend = () => {
-            console.log('🔚 Speech recognition ended');
-            this.isAwake = false;
-            this.notifyBackgroundScript('speech_ended');
-        };
-
-        this.speechRecognition.onstart = () => {
-            console.log('🎤 Speech recognition started for command');
-        };
+        } catch (error) {
+            console.error('❌ Error processing wake word results:', error);
+            this.stats.recognition_failures++;
+        }
     }
 
-    getErrorMessage(error) {
-        const errorMessages = {
-            'not-allowed': 'Microphone access denied',
-            'no-speech': 'No speech detected',
-            'audio-capture': 'Microphone not available',
-            'network': 'Network error occurred',
-            'service-not-allowed': 'Speech service not allowed',
-            'bad-grammar': 'Grammar error in recognition'
-        };
-        return errorMessages[error] || `Speech recognition error: ${error}`;
+    handleCommandResults(event) {
+        try {
+            let bestResult = null;
+            let bestConfidence = 0;
+
+            // Analyze all alternatives to find best match
+            for (let i = 0; i < event.results.length; i++) {
+                const result = event.results[i];
+                for (let j = 0; j < Math.min(result.length, 3); j++) {
+                    const alternative = result[j];
+                    const transcript = alternative.transcript.trim();
+                    const confidence = alternative.confidence || 0;
+
+                    console.log(`🗣️ Command alternative ${j+1}: "${transcript}" (confidence: ${confidence.toFixed(2)})`);
+
+                    if (confidence > bestConfidence && confidence > this.accuracySettings.command_threshold) {
+                        bestResult = { transcript, confidence };
+                        bestConfidence = confidence;
+                    }
+                }
+            }
+
+            if (bestResult) {
+                console.log(`✅ Best command match: "${bestResult.transcript}" (confidence: ${bestResult.confidence.toFixed(2)})`);
+
+                // Enhanced command parsing
+                const parsedCommand = this.config.parseCommand(bestResult.transcript);
+
+                // Update statistics
+                this.stats.command_recognitions++;
+                this.updateAverageConfidence(bestResult.confidence);
+
+                // Send enhanced command data
+                this.notifyBackgroundScript('voice_command', {
+                    transcript: bestResult.transcript,
+                    confidence: bestResult.confidence,
+                    parsed_command: parsedCommand,
+                    timestamp: Date.now(),
+                    method: 'enhanced_parsing'
+                });
+            } else {
+                console.log('⚠️ No command met confidence threshold');
+            }
+
+        } catch (error) {
+            console.error('❌ Error processing command results:', error);
+            this.stats.recognition_failures++;
+        }
     }
 
-    handleWakeWordDetected(transcript, confidence) {
-        console.log(`🎯 Wake word detected: "${transcript}" (confidence: ${confidence.toFixed(2)})`);
+    handleEnhancedWakeWordDetected(transcript, confidence, detection) {
+        console.log(`🎯 Enhanced wake word detected: "${transcript}"`);
+        console.log(`📊 Detection details:`, detection);
 
         this.isAwake = true;
 
-        // Notify background script
+        // Notify background script with enhanced data
         this.notifyBackgroundScript('wake_word_detected', {
-            keyword: 'hey rupert',
+            keyword: detection.matched,
             transcript: transcript,
             confidence: confidence,
-            timestamp: Date.now()
+            detection_method: detection.method,
+            similarity: detection.similarity || null,
+            timestamp: Date.now(),
+            enhanced: true
         });
 
-        // Start listening for voice command
-        this.startCommandListening();
+        // Start enhanced command listening
+        this.startEnhancedCommandListening();
     }
 
-    startCommandListening() {
+    startEnhancedCommandListening() {
         if (!this.speechRecognition || !this.permissionGranted) {
-            console.error('❌ Cannot start command listening: speech recognition not available or permission denied');
+            console.error('❌ Cannot start enhanced command listening: not available');
             return;
         }
 
         try {
-            // Stop any existing command recognition
+            // Stop any existing recognition
             if (this.speechRecognition.state !== 'inactive') {
                 this.speechRecognition.stop();
             }
 
+            // Delay to ensure clean start
             setTimeout(() => {
                 try {
+                    console.log('🎤 Starting enhanced command listening...');
                     this.speechRecognition.start();
-                    console.log('🎤 Started listening for voice command...');
 
-                    // Auto-timeout after specified duration
+                    // Enhanced timeout with warning
                     setTimeout(() => {
-                        if (this.isAwake && this.speechRecognition) {
-                            console.log('⏰ Command listening timeout');
-                            this.speechRecognition.stop();
-                            this.isAwake = false;
+                        if (this.isAwake) {
+                            console.log('⏰ Enhanced command timeout - still listening');
+                            // Give extra time for complex commands
+                            setTimeout(() => {
+                                if (this.isAwake && this.speechRecognition) {
+                                    console.log('⏰ Final command timeout');
+                                    this.speechRecognition.stop();
+                                    this.isAwake = false;
+                                }
+                            }, 3000); // Extra 3 seconds
                         }
-                    }, this.command_timeout);
+                    }, this.accuracySettings.command_timeout);
 
                 } catch (startError) {
-                    console.error('❌ Error starting command recognition:', startError);
+                    console.error('❌ Error starting enhanced command recognition:', startError);
                 }
-            }, 500); // Small delay to ensure previous recognition has stopped
+            }, 200); // Reduced delay for faster response
 
         } catch (error) {
-            console.error('❌ Error starting speech recognition:', error);
+            console.error('❌ Error in enhanced command listening setup:', error);
         }
     }
 
+    // Enhanced error handling
+    handleWakeWordError(event) {
+        console.log(`❌ Enhanced wake word error: ${event.error}`);
+
+        this.stats.recognition_failures++;
+
+        if (event.error === 'not-allowed') {
+            this.permissionGranted = false;
+            return;
+        }
+
+        // Adaptive restart logic
+        if (this.isListening && event.error !== 'aborted') {
+            const delay = this.calculateRestartDelay();
+            console.log(`🔄 Restarting enhanced wake word detection in ${delay}ms...`);
+
+            setTimeout(() => {
+                if (this.isListening && this.permissionGranted) {
+                    this.startListening();
+                }
+            }, delay);
+        }
+    }
+
+    handleCommandError(event) {
+        console.error(`❌ Enhanced command error: ${event.error}`);
+        this.stats.recognition_failures++;
+
+        // Try alternative recognition if available
+        if (event.error === 'no-speech' && this.isAwake) {
+            console.log('🔄 No speech detected, trying alternative recognition...');
+            // Give another chance for command input
+            setTimeout(() => {
+                if (this.isAwake) {
+                    this.startEnhancedCommandListening();
+                }
+            }, 1000);
+        }
+    }
+
+    // Adaptive restart delay based on error frequency
+    calculateRestartDelay() {
+        const errorRate = this.stats.recognition_failures / (this.stats.wake_word_detections + this.stats.command_recognitions + 1);
+
+        if (errorRate > 0.3) {
+            return 2000; // Longer delay if many errors
+        } else if (errorRate > 0.1) {
+            return 1000; // Medium delay
+        } else {
+            return this.accuracySettings.restart_delay; // Normal delay
+        }
+    }
+
+    // Update running average confidence
+    updateAverageConfidence(confidence) {
+        const totalDetections = this.stats.wake_word_detections + this.stats.command_recognitions;
+        this.stats.average_confidence = ((this.stats.average_confidence * (totalDetections - 1)) + confidence) / totalDetections;
+    }
+
+    // Enhanced event handlers
+    handleWakeWordStart() {
+        console.log('🎤 Enhanced wake word recognition started');
+    }
+
+    handleWakeWordEnd() {
+        console.log('🔚 Enhanced wake word recognition ended');
+
+        if (this.isListening && this.permissionGranted) {
+            setTimeout(() => {
+                if (this.isListening) {
+                    this.startListening();
+                }
+            }, 50); // Very quick restart for continuous listening
+        }
+    }
+
+    handleCommandStart() {
+        console.log('🎤 Enhanced command recognition started');
+    }
+
+    handleCommandEnd() {
+        console.log('🔚 Enhanced command recognition ended');
+        this.isAwake = false;
+    }
+
+    handleSpeechStart() {
+        console.log('👂 Speech detected - processing...');
+    }
+
+    handleSpeechEnd() {
+        console.log('🔇 Speech ended - analyzing...');
+    }
+
+    handleNoMatch() {
+        console.log('❓ No speech recognition match found');
+    }
+
+    // Get performance statistics
+    getPerformanceStats() {
+        const totalDetections = this.stats.wake_word_detections + this.stats.command_recognitions;
+        const successRate = totalDetections / (totalDetections + this.stats.recognition_failures);
+
+        return {
+            ...this.stats,
+            success_rate: (successRate * 100).toFixed(1) + '%',
+            total_detections: totalDetections,
+            average_confidence_percent: (this.stats.average_confidence * 100).toFixed(1) + '%'
+        };
+    }
+
+    // Enhanced public methods
     async startListening() {
         if (!this.permissionGranted) {
-            console.log('❌ Cannot start listening: microphone permission not granted');
-            // Just check status passively - don't request
+            console.log('❌ Cannot start listening: no permission');
             await this.checkPermissionStatusPassively();
-            if (!this.permissionGranted) {
-                return false;
-            }
+            if (!this.permissionGranted) return false;
         }
 
         if (!this.isInitialized) {
-            console.log('⚠️ Cannot start listening: wake word detector not initialized');
             await this.initialize();
-            if (!this.isInitialized) {
-                return false;
-            }
+            if (!this.isInitialized) return false;
         }
 
         if (this.recognition && !this.isListening) {
@@ -385,12 +421,12 @@ class EnhancedWakeWordDetector {
                 this.isListening = true;
                 this.recognition.start();
 
-                this.notifyBackgroundScript('listening_started');
                 console.log('✅ Enhanced wake word detection started');
-                return true;
+                console.log('📊 Performance stats:', this.getPerformanceStats());
 
+                return true;
             } catch (error) {
-                console.error('❌ Error starting wake word detection:', error);
+                console.error('❌ Error starting enhanced wake word detection:', error);
                 this.isListening = false;
                 return false;
             }
@@ -404,39 +440,21 @@ class EnhancedWakeWordDetector {
                 this.isListening = false;
                 this.recognition.stop();
 
-                // Also stop command recognition if active
                 if (this.speechRecognition && this.isAwake) {
                     this.speechRecognition.stop();
                     this.isAwake = false;
                 }
 
-                this.notifyBackgroundScript('listening_stopped');
                 console.log('🛑 Enhanced wake word detection stopped');
-                return true;
+                console.log('📊 Final performance stats:', this.getPerformanceStats());
 
+                return true;
             } catch (error) {
-                console.error('❌ Error stopping wake word detection:', error);
+                console.error('❌ Error stopping enhanced wake word detection:', error);
                 return false;
             }
         }
         return false;
-    }
-
-    async destroy() {
-        console.log('🗑️ Destroying enhanced wake word detector...');
-        await this.stopListening();
-
-        if (this.speechRecognition) {
-            this.speechRecognition.stop();
-        }
-
-        this.recognition = null;
-        this.speechRecognition = null;
-        this.isInitialized = false;
-        this.isListening = false;
-        this.isAwake = false;
-
-        console.log('✅ Enhanced wake word detector destroyed');
     }
 
     notifyBackgroundScript(action, data = {}) {
@@ -444,7 +462,7 @@ class EnhancedWakeWordDetector {
             const message = {
                 action: action,
                 type: action.toUpperCase(),
-                source: 'wake_word_detector',
+                source: 'ultra_enhanced_wake_word_detector',
                 timestamp: Date.now(),
                 ...data
             };
@@ -452,8 +470,6 @@ class EnhancedWakeWordDetector {
             chrome.runtime.sendMessage(message, (response) => {
                 if (chrome.runtime.lastError) {
                     console.warn('⚠️ Background script communication error:', chrome.runtime.lastError.message);
-                } else {
-                    console.log(`📨 Notified background script: ${action}`, response);
                 }
             });
         } catch (error) {
@@ -461,70 +477,47 @@ class EnhancedWakeWordDetector {
         }
     }
 
-    // Public method to check if detector is ready
-    isReady() {
-        return this.isInitialized && this.permissionGranted;
-    }
-
-    // Public method to get current status
     getStatus() {
         return {
             initialized: this.isInitialized,
             permissionGranted: this.permissionGranted,
             listening: this.isListening,
-            awake: this.isAwake
+            awake: this.isAwake,
+            stats: this.getPerformanceStats()
         };
     }
 }
 
 // Initialize Enhanced Wake Word Detector
-const enhancedWakeWordDetector = new EnhancedWakeWordDetector();
+const ultraEnhancedWakeWordDetector = new UltraEnhancedWakeWordDetector();
 
-// Make it globally available
-window.wakeWordDetector = enhancedWakeWordDetector;
-window.enhancedWakeWordDetector = enhancedWakeWordDetector;
+// Make globally available
+window.wakeWordDetector = ultraEnhancedWakeWordDetector;
+window.ultraEnhancedWakeWordDetector = ultraEnhancedWakeWordDetector;
 
-// Listen for messages from background script
+// Message handling
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('📨 Wake word detector received message:', request);
-
     const action = request.action || request.type;
 
     switch (action) {
         case 'initialize_wake_word':
         case 'INITIALIZE_WAKE_WORD':
-            enhancedWakeWordDetector.initialize().then(success => {
+            ultraEnhancedWakeWordDetector.initialize().then(success => {
                 sendResponse({ success });
-            });
-            return true;
-
-        case 'request_microphone_permission':
-        case 'REQUEST_MICROPHONE_PERMISSION':
-            enhancedWakeWordDetector.requestMicrophonePermissionExplicitly().then(granted => {
-                sendResponse({ success: granted });
             });
             return true;
 
         case 'start_wake_detection':
         case 'START_WAKE_WORD_DETECTION':
-        case 'start_wake_word_detection':
-            enhancedWakeWordDetector.startListening().then(success => {
+            ultraEnhancedWakeWordDetector.startListening().then(success => {
                 sendResponse({ success });
             });
             return true;
 
         case 'stop_wake_detection':
         case 'STOP_WAKE_WORD_DETECTION':
-        case 'stop_wake_word_detection':
-            enhancedWakeWordDetector.stopListening().then(success => {
+            ultraEnhancedWakeWordDetector.stopListening().then(success => {
                 sendResponse({ success });
-            });
-            return true;
-
-        case 'destroy_wake_word':
-        case 'DESTROY_WAKE_WORD':
-            enhancedWakeWordDetector.destroy().then(() => {
-                sendResponse({ success: true });
             });
             return true;
 
@@ -532,50 +525,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'GET_STATUS':
             sendResponse({
                 success: true,
-                status: enhancedWakeWordDetector.getStatus()
+                status: ultraEnhancedWakeWordDetector.getStatus()
             });
             return false;
 
-        case 'permissions_granted':
-        case 'PERMISSION_GRANTED':
-            enhancedWakeWordDetector.permissionGranted = true;
-            if (!enhancedWakeWordDetector.isInitialized) {
-                enhancedWakeWordDetector.initialize();
-            }
-            sendResponse({ success: true });
-            return false;
-
-        case 'permissions_denied':
-        case 'PERMISSION_DENIED':
-            enhancedWakeWordDetector.permissionGranted = false;
-            enhancedWakeWordDetector.stopListening();
-            sendResponse({ success: true });
-            return false;
-
-        default:
-            console.log('❓ Unknown message action:', action);
-            sendResponse({ success: false, error: 'Unknown action' });
+        case 'get_performance_stats':
+        case 'GET_PERFORMANCE_STATS':
+            sendResponse({
+                success: true,
+                stats: ultraEnhancedWakeWordDetector.getPerformanceStats()
+            });
             return false;
     }
 });
 
-// PASSIVE initialization when page loads - NO getUserMedia calls!
+// Passive initialization
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 Enhanced wake word detector DOM ready - checking permission status passively...');
+    console.log('📄 Ultra-enhanced wake word detector ready - checking permissions passively...');
 
     setTimeout(async () => {
         try {
-            // ONLY check permission status passively - NEVER request or initialize automatically
-            await enhancedWakeWordDetector.checkPermissionStatusPassively();
-            console.log('✅ Wake word detector permission status checked passively (no getUserMedia)');
-
-            // Log the result for debugging
-            console.log(`📊 Permission status: ${enhancedWakeWordDetector.permissionGranted ? 'GRANTED' : 'DENIED'}`);
-
+            await ultraEnhancedWakeWordDetector.checkPermissionStatusPassively();
+            console.log('✅ Ultra-enhanced wake word detector permission status checked passively');
         } catch (error) {
             console.log('❌ Passive permission check failed:', error.message);
         }
-    }, 1000); // Small delay to ensure everything is loaded
+    }, 1000);
 });
 
-console.log('🎤✅ Enhanced Wake Word Detector Script Loaded (PERMISSION-CONTROLLED - no auto getUserMedia)');
+console.log('🎯✅ Ultra-Enhanced Wake Word Detector Script Loaded with Maximum Accuracy');

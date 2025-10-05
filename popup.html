@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rupert Voice Assistant</title>
     <style>
+        /* Enhanced Popup Styling with Swapped Layout */
         * {
             margin: 0;
             padding: 0;
@@ -12,160 +13,297 @@
         }
 
         body {
-            width: 400px;
-            min-height: 600px;
-            background: linear-gradient(135deg, #1B365D 0%, #2E5984 100%);
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 380px;
+            min-height: 500px;
+            background: linear-gradient(135deg, #1B365D 0%, #2D5A87 100%);
+            color: #FFFFFF;
+            overflow: hidden;
         }
 
-        .header {
-            background: rgba(255, 255, 255, 0.1);
+        .container {
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 500px;
+        }
+
+        /* Header */
+        .header {
             text-align: center;
-            backdrop-filter: blur(10px);
+            margin-bottom: 10px;
+        }
+
+        .header .icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            display: block;
         }
 
         .header h1 {
             font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 5px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 4px;
         }
 
-        .header p {
+        .header .subtitle {
             font-size: 14px;
-            opacity: 0.8;
+            color: #B8D4F0;
+            opacity: 0.9;
         }
 
-        .main-content {
-            padding: 20px;
+        /* MAIN TOGGLE BUTTON - Now positioned higher and centered */
+        .main-toggle-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            padding: 15px 0;
         }
 
-        .permission-status {
+        .main-toggle {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 280px;
+            padding: 20px 24px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            user-select: none;
         }
 
-        .permission-row {
+        .main-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .main-toggle.active {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22C55E;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+        }
+
+        .main-toggle.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .toggle-content {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
+            text-align: center;
+            width: 100%;
         }
 
-        .permission-row:last-child {
-            margin-bottom: 0;
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            margin-bottom: 12px;
+            transition: background-color 0.3s ease;
         }
 
-        .permission-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
-
-        .permission-status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #EF4444;
-            transition: all 0.3s ease;
-        }
-
-        .permission-status-indicator.granted {
+        .main-toggle.active .toggle-switch {
             background: #22C55E;
         }
 
-        .permission-status-indicator.checking {
-            background: #F59E0B;
-            animation: pulse 2s infinite;
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: #FFFFFF;
+            border-radius: 50%;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
-        /* Microphone Testing Section */
-        .microphone-test {
-            background: rgba(255, 255, 255, 0.05);
+        .toggle-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 4px;
+        }
+
+        .toggle-description {
+            font-size: 12px;
+            color: #B8D4F0;
+            opacity: 0.9;
+        }
+
+        /* STATUS SECTION - Now positioned lower */
+        .status-section {
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            margin-top: 10px;
         }
 
-        .microphone-test.hidden {
-            display: none;
+        .status-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .status-item .label {
+            font-size: 14px;
+            color: #B8D4F0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-item .value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #FFFFFF;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #EF4444;
+            transition: background-color 0.3s ease;
+        }
+
+        .status-indicator.granted {
+            background-color: #22C55E;
+        }
+
+        /* Microphone Test Section */
+        .microphone-test {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .microphone-test h3 {
             font-size: 16px;
             font-weight: 600;
-            margin-bottom: 15px;
-            color: #ffffff;
-            text-align: center;
+            color: #FFFFFF;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .test-status {
-            background: rgba(59, 130, 246, 0.2);
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
-            padding: 12px 15px;
-            margin-bottom: 15px;
-            font-size: 14px;
+            padding: 12px;
+            margin-bottom: 12px;
             text-align: center;
-            transition: all 0.3s ease;
+            font-size: 14px;
+            color: #B8D4F0;
         }
 
         .test-status.listening {
-            background: rgba(34, 197, 94, 0.2);
+            background: rgba(34, 197, 94, 0.1);
             border: 1px solid rgba(34, 197, 94, 0.3);
-            animation: pulse 2s infinite;
+            color: #22C55E;
         }
 
         .test-status.success {
-            background: rgba(34, 197, 94, 0.2);
+            background: rgba(34, 197, 94, 0.1);
             border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22C55E;
         }
 
         .test-status.error {
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #EF4444;
         }
 
-        .transcript-display {
-            background: rgba(0, 0, 0, 0.3);
+        /* Live Transcript */
+        .live-transcript {
+            background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            min-height: 80px;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.4;
+            padding: 12px;
+            margin-bottom: 12px;
+            min-height: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .transcript-display h4 {
+        .transcript-label {
             font-size: 12px;
             color: #22C55E;
-            margin-bottom: 10px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+            font-weight: 500;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .transcript-text {
-            color: #ffffff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: #FFFFFF;
+            line-height: 1.4;
+            white-space: pre-wrap;
             word-wrap: break-word;
         }
 
-        .transcript-empty {
-            color: #888;
+        .transcript-text.transcript-empty {
+            color: #6B7280;
             font-style: italic;
         }
 
+        .wake-word-highlight {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22C55E;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        /* Confidence Level */
         .confidence-display {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-            padding: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+        }
+
+        .confidence-label {
             font-size: 12px;
-            text-align: center;
+            color: #B8D4F0;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .confidence-bar {
@@ -174,337 +312,296 @@
             background: rgba(255, 255, 255, 0.1);
             border-radius: 3px;
             overflow: hidden;
-            margin-top: 5px;
         }
 
         .confidence-fill {
             height: 100%;
             background: linear-gradient(90deg, #EF4444 0%, #F59E0B 50%, #22C55E 100%);
             width: 0%;
-            transition: all 0.3s ease;
+            border-radius: 3px;
+            transition: width 0.3s ease;
         }
 
-        .test-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .main-toggle {
-            background: rgba(255, 255, 255, 0.15);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .main-toggle:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .main-toggle.active {
-            background: rgba(34, 197, 94, 0.2);
-            border-color: rgba(34, 197, 94, 0.5);
-        }
-
-        .main-toggle.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
-        .toggle-content {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 60px;
-            height: 32px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .main-toggle.active .toggle-switch {
-            background: rgba(34, 197, 94, 0.8);
-        }
-
-        .toggle-slider {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 26px;
-            height: 26px;
-            background: white;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .toggle-info {
-            flex: 1;
-        }
-
-        .toggle-text {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .toggle-description {
-            font-size: 13px;
-            opacity: 0.8;
-        }
-
-        .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 20px;
+        /* Buttons */
+        .button {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
             border-radius: 8px;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            text-decoration: none;
         }
 
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.4);
+        .button-primary {
+            background: #22C55E;
+            color: #FFFFFF;
+        }
+
+        .button-primary:hover {
+            background: #16A34A;
             transform: translateY(-1px);
         }
 
-        .btn:active {
-            transform: translateY(0);
+        .button-secondary {
+            background: #3B82F6;
+            color: #FFFFFF;
         }
 
-        .btn.primary {
-            background: rgba(34, 197, 94, 0.8);
-            border-color: rgba(34, 197, 94, 0.9);
+        .button-secondary:hover {
+            background: #2563EB;
+            transform: translateY(-1px);
         }
 
-        .btn.primary:hover {
-            background: rgba(34, 197, 94, 0.9);
-        }
-
-        .btn.secondary {
-            background: rgba(59, 130, 246, 0.8);
-            border-color: rgba(59, 130, 246, 0.9);
-        }
-
-        .btn.secondary:hover {
-            background: rgba(59, 130, 246, 0.9);
-        }
-
-        .btn.danger {
-            background: rgba(239, 68, 68, 0.8);
-            border-color: rgba(239, 68, 68, 0.9);
-        }
-
-        .btn.danger:hover {
-            background: rgba(239, 68, 68, 0.9);
-        }
-
-        .btn:disabled {
+        .button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            pointer-events: none;
+            transform: none !important;
         }
 
-        .btn.hidden {
-            display: none;
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
         }
 
+        /* Message Container */
         .message-container {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             min-height: 20px;
         }
 
-        .success-message {
-            background: rgba(34, 197, 94, 0.2);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            border-radius: 8px;
-            padding: 10px 15px;
+        .success-message, .error-message {
+            padding: 8px 12px;
+            border-radius: 6px;
             font-size: 13px;
-            line-height: 1.4;
+            text-align: center;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .success-message {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22C55E;
         }
 
         .error-message {
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 8px;
-            padding: 10px 15px;
-            font-size: 13px;
-            line-height: 1.4;
+            color: #EF4444;
         }
 
+        /* Debug Section */
         .debug-section {
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            padding-top: 15px;
-            margin-top: 15px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .debug-button {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #B8D4F0;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .debug-button:hover {
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .debug-info {
             max-height: 0;
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: max-height 0.3s ease;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin-top: 8px;
         }
 
         .debug-info.visible {
             max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .debug-content {
+            padding: 12px;
+        }
+
+        .debug-item {
+            font-size: 11px;
+            color: #9CA3AF;
+            margin-bottom: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
         }
 
         .debug-log {
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 6px;
-            padding: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            line-height: 1.4;
-            margin-top: 10px;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 10px;
+            color: #D1D5DB;
+            line-height: 1.3;
             max-height: 120px;
             overflow-y: auto;
+            white-space: pre-wrap;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
         }
 
         .fade-in {
-            animation: fadeIn 0.3s ease;
+            animation: fadeIn 0.3s ease-in;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(-4px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .wake-word-highlight {
-            background: rgba(34, 197, 94, 0.3);
-            color: #22C55E;
-            padding: 2px 4px;
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 3px;
-            font-weight: bold;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🎤 Rupert</h1>
-        <p>Voice Assistant</p>
-    </div>
-
-    <div class="main-content">
-        <!-- Permission Status Section -->
-        <div class="permission-status">
-            <h3 style="font-size: 16px; margin-bottom: 15px;">Status</h3>
-
-            <div class="permission-row">
-                <div class="permission-label">
-                    <span class="permission-status-indicator" id="mic-permission"></span>
-                    <span>Microphone</span>
-                </div>
-                <span id="mic-status-text">Checking...</span>
-            </div>
-
-            <div class="permission-row">
-                <div class="permission-label">
-                    <span class="permission-status-indicator" id="connection-dot"></span>
-                    <span>Service</span>
-                </div>
-                <span id="connection-text">Disconnected</span>
-            </div>
-        </div>
-
-        <!-- Microphone Testing Section -->
-        <div id="microphone-test" class="microphone-test hidden">
-            <h3>🎤 Microphone Test</h3>
-
-            <div id="test-status" class="test-status">
-                Ready to test microphone
-            </div>
-
-            <div class="transcript-display">
-                <h4>📝 Live Transcript:</h4>
-                <div id="transcript-text" class="transcript-text transcript-empty">
-                    Speak after clicking "Test Microphone" to see your words here...
-                </div>
-            </div>
-
-            <div class="confidence-display">
-                <div>Confidence Level: <span id="confidence-percentage">0%</span></div>
-                <div class="confidence-bar">
-                    <div id="confidence-fill" class="confidence-fill"></div>
-                </div>
-            </div>
-
-            <div class="test-buttons">
-                <button id="test-microphone" class="btn primary">
-                    <span>🎤</span> Test Microphone
-                </button>
-
-                <button id="clear-transcript" class="btn secondary">
-                    <span>🗑️</span> Clear Transcript
-                </button>
-            </div>
-        </div>
-
-        <!-- Permission Request Section -->
-        <div id="permission-request" class="microphone-test hidden">
-            <h3>🔐 Permission Required</h3>
-
-            <div class="test-status">
-                Rupert needs microphone access to function properly
-            </div>
-
-            <div class="test-buttons">
-                <button id="request-permission" class="btn primary">
-                    <span>🔓</span> Grant Microphone Access
-                </button>
-            </div>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <span class="icon">🎤</span>
+            <h1>Rupert</h1>
+            <div class="subtitle">Voice Assistant</div>
         </div>
 
         <!-- Message Container -->
         <div id="message-container" class="message-container"></div>
 
-        <!-- Main Toggle Section -->
-        <button id="main-toggle" class="main-toggle disabled" aria-pressed="false">
-            <div class="toggle-content">
-                <div class="toggle-switch">
-                    <div id="toggle-slider" class="toggle-slider"></div>
-                </div>
-                <div class="toggle-info">
+        <!-- MAIN TOGGLE BUTTON - Now positioned higher -->
+        <div class="main-toggle-section">
+            <div id="main-toggle" class="main-toggle disabled" role="switch" aria-pressed="false" tabindex="0">
+                <div class="toggle-content">
+                    <div class="toggle-switch">
+                        <div id="toggle-slider" class="toggle-slider"></div>
+                    </div>
                     <div class="toggle-text">Turn On</div>
                     <div class="toggle-description">Start voice recognition</div>
                 </div>
             </div>
-        </button>
+        </div>
+
+        <!-- STATUS SECTION - Now positioned lower -->
+        <div class="status-section">
+            <h3>📊 Status</h3>
+            <div class="status-item">
+                <div class="label">
+                    <div id="mic-permission" class="status-indicator"></div>
+                    Microphone
+                </div>
+                <div id="mic-status-text" class="value">Denied</div>
+            </div>
+            <div class="status-item">
+                <div class="label">
+                    <div id="connection-dot" class="status-indicator"></div>
+                    Service
+                </div>
+                <div id="connection-text" class="value">Disconnected</div>
+            </div>
+        </div>
+
+        <!-- Microphone Test Section -->
+        <div id="microphone-test" class="microphone-test hidden">
+            <h3>🎤 Microphone Test</h3>
+            <div id="test-status" class="test-status">Ready to test microphone</div>
+
+            <!-- Live Transcript -->
+            <div class="live-transcript">
+                <div class="transcript-label">
+                    📝 Live Transcript:
+                </div>
+                <div id="transcript-text" class="transcript-text transcript-empty">
+                    Speak after clicking "Test Microphone" to see your words here...
+                </div>
+            </div>
+
+            <!-- Confidence Level Display -->
+            <div class="confidence-display">
+                <div class="confidence-label">
+                    Confidence Level: <span id="confidence-percentage">0%</span>
+                </div>
+                <div class="confidence-bar">
+                    <div id="confidence-fill" class="confidence-fill"></div>
+                </div>
+            </div>
+
+            <!-- Test Buttons -->
+            <div class="button-group">
+                <button id="test-microphone" class="button button-primary">
+                    <span>🎤</span> Test Microphone
+                </button>
+                <button id="clear-transcript" class="button button-secondary">
+                    <span>🗑️</span> Clear Transcript
+                </button>
+            </div>
+        </div>
+
+        <!-- Permission Request Section (shown when needed) -->
+        <div id="permission-setup" class="microphone-test hidden">
+            <h3>🔐 Microphone Permission Required</h3>
+            <div class="test-status">
+                Rupert needs access to your microphone to listen for voice commands like "Hey Rupert"
+            </div>
+            <button id="request-permission" class="button button-primary">
+                <span>🎤</span> Grant Microphone Access
+            </button>
+
+            <!-- Manual Instructions (shown on permission denied) -->
+            <div id="manual-instructions" class="test-status error hidden" style="margin-top: 12px;">
+                If the button doesn't work, manually enable microphone in Chrome settings:
+                <br>1. Click the microphone icon in the address bar
+                <br>2. Select "Always allow" for this extension
+                <br>3. Refresh this popup
+            </div>
+        </div>
 
         <!-- Debug Section -->
         <div class="debug-section">
-            <button id="debug-button" class="btn">Show Debug Information</button>
+            <button id="debug-button" class="debug-button">Show Debug Information</button>
             <div id="debug-info" class="debug-info">
-                <div style="margin-bottom: 10px;">
-                    <strong>Load Time:</strong> <span id="load-time">-</span>
+                <div class="debug-content">
+                    <div class="debug-item">Load Time: <span id="load-time"></span></div>
+                    <div class="debug-item">Extension Version: 1.0.4</div>
+                    <div class="debug-item">Browser: Chrome Extension</div>
+                    <div class="debug-item">Debug Log:</div>
+                    <div id="debug-log" class="debug-log">Initializing debug logging...</div>
                 </div>
-                <div style="margin-bottom: 10px;">
-                    <strong>Extension Version:</strong> <span id="extension-version">1.0.6</span>
-                </div>
-                <div id="debug-log" class="debug-log"></div>
             </div>
         </div>
     </div>
