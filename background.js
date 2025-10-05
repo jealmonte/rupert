@@ -1,15 +1,9 @@
-// Enhanced Background.js with Hardcoded Voice Commands and Command Overlay Support
+// Rupert AI Voice Assistant - Background Script with CURRENT WORKING GEMINI MODEL
+console.log('🚀 Rupert AI Voice Assistant Starting (Current Model)...');
 
-// Integrates specific commands: "hey rupert open new tab" and "hey rupert open amazon"
-// Includes visual command overlay feedback
+let geminiAssistant = null;
 
-console.log('🎤 Rupert Enhanced Background Service Worker Starting...');
-
-// Import enhanced command processing
-let commandExecutor = null;
-
-// ===== ENHANCED STATE MANAGEMENT =====
-
+// State management
 let extensionState = {
     isEnabled: false,
     isListening: false,
@@ -17,768 +11,839 @@ let extensionState = {
     lastActivity: Date.now(),
     activeTab: null,
     permissionsGranted: false,
-    microphonePermission: false
+    microphonePermission: false,
+    geminiConfigured: false
 };
 
-let currentTabId = null;
-let allTabs = [];
-
-// ===== SERVICE WORKER INITIALIZATION =====
-
-chrome.runtime.onInstalled.addListener(async (details) => {
-    console.log('🔧 Rupert Extension Installed/Updated:', details.reason);
-
-    try {
-        // Initialize command executor
-        commandExecutor = new EnhancedCommandExecutor();
-        console.log('⚡ Command executor initialized');
-
-        // Load saved state
-        const savedState = await chrome.storage.local.get(['extensionState']);
-        if (savedState.extensionState) {
-            extensionState = { ...extensionState, ...savedState.extensionState };
-        }
-
-        // Check initial permissions
-        await checkAllPermissions();
-
-        // Initialize wake word detection on all tabs if permissions are granted
-        if (extensionState.permissionsGranted) {
-            await initializeAllTabs();
-        }
-
-        updateExtensionBadge();
-        console.log('📊 Initial State Loaded:', extensionState);
-    } catch (error) {
-        console.error('❌ Initialization Error:', error);
-    }
-});
-
-// ===== PERMISSION MANAGEMENT =====
-
-async function checkAllPermissions() {
-    console.log('🔍 Checking all permissions...');
-    try {
-        const data = await chrome.storage.local.get(['microphonePermission']);
-        extensionState.microphonePermission = data.microphonePermission || false;
-        extensionState.permissionsGranted = extensionState.microphonePermission;
-
-        console.log('Permission status:', {
-            microphone: extensionState.microphonePermission,
-            overall: extensionState.permissionsGranted
-        });
-
-        return extensionState.permissionsGranted;
-    } catch (error) {
-        console.error('Permission check error:', error);
-        return false;
-    }
-}
-
-async function handlePermissionGranted() {
-    console.log('✅ Microphone permission granted');
-    extensionState.microphonePermission = true;
-    extensionState.permissionsGranted = true;
-
-    // Save permission state
-    await chrome.storage.local.set({
-        microphonePermission: true,
-        extensionState: extensionState
-    });
-
-    // Initialize wake word detection
-    if (extensionState.isEnabled) {
-        await initializeAllTabs();
-        await startWakeWordDetection();
+// Gemini Voice Assistant Class with CURRENT WORKING MODEL
+class GeminiVoiceAssistant {
+    constructor() {
+        this.geminiApiKey = null;
+        this.isInitialized = false;
+        this.initialize();
+        console.log('🤖 GeminiVoiceAssistant constructed with current working model');
     }
 
-    updateExtensionBadge();
-}
-
-async function handlePermissionDenied() {
-    console.log('❌ Microphone permission denied');
-    extensionState.microphonePermission = false;
-    extensionState.permissionsGranted = false;
-    extensionState.isEnabled = false;
-    extensionState.isListening = false;
-
-    // Save permission state
-    await chrome.storage.local.set({
-        microphonePermission: false,
-        extensionState: extensionState
-    });
-
-    // Stop any active listening
-    await stopAllListening();
-    updateExtensionBadge();
-}
-
-// ===== TAB MANAGEMENT FUNCTIONS =====
-
-async function getAllTabs() {
-    try {
-        const tabs = await chrome.tabs.query({});
-        allTabs = tabs;
-        console.log(`Found ${tabs.length} open tabs`);
-        return tabs;
-    } catch (error) {
-        console.error('Error getting all tabs:', error);
-        return [];
-    }
-}
-
-async function switchToTab(tabId) {
-    try {
-        await chrome.tabs.update(tabId, { active: true });
-        const tab = await chrome.tabs.get(tabId);
-        await chrome.windows.update(tab.windowId, { focused: true });
-
-        currentTabId = tabId;
-        extensionState.activeTab = tabId;
-        console.log(`Switched to tab: ${tab.title}`);
-
-        return { success: true, tab: tab };
-    } catch (error) {
-        console.error('Error switching to tab:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-async function createNewTab(url = 'chrome://newtab/') {
-    try {
-        const tab = await chrome.tabs.create({ url: url, active: true });
-        currentTabId = tab.id;
-        extensionState.activeTab = tab.id;
-        return { success: true, tab: tab };
-    } catch (error) {
-        console.error('Error creating new tab:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-// ===== WAKE WORD DETECTION FUNCTIONS =====
-
-async function initializeAllTabs() {
-    if (!extensionState.permissionsGranted) {
-        console.log('Cannot initialize tabs: permissions not granted');
-        return;
-    }
-
-    try {
-        const tabs = await chrome.tabs.query({});
-        let initializedCount = 0;
-
-        for (const tab of tabs) {
-            try {
-                await initializeWakeWordInTab(tab.id);
-                initializedCount++;
-            } catch (error) {
-                // Some tabs can't be initialized (chrome://, etc.)
-            }
-        }
-
-        console.log(`Initialized wake word detection in ${initializedCount}/${tabs.length} tabs`);
-    } catch (error) {
-        console.error('Error initializing all tabs:', error);
-    }
-}
-
-async function initializeWakeWordInTab(tabId) {
-    try {
-        await chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            func: () => {
-                if (window.wakeWordDetector && typeof window.wakeWordDetector.initialize === 'function') {
-                    window.wakeWordDetector.initialize();
-                }
-            }
-        });
-        console.log(`Wake word detector initialized in tab ${tabId}`);
-    } catch (error) {
-        // Tab might not support content scripts
-        console.log(`Cannot initialize wake word in tab ${tabId}:`, error.message);
-    }
-}
-
-async function startWakeWordDetection() {
-    if (!extensionState.permissionsGranted) {
-        console.log('Cannot start wake word detection: permissions not granted');
-        return { success: false, error: 'Microphone permission not granted' };
-    }
-
-    try {
-        const tabs = await chrome.tabs.query({});
-        let startedCount = 0;
-
-        for (const tab of tabs) {
-            try {
-                await chrome.tabs.sendMessage(tab.id, {
-                    type: 'START_WAKE_WORD_DETECTION',
-                    action: 'start_wake_word_detection'
-                });
-                startedCount++;
-            } catch (error) {
-                // Ignore tabs without content scripts
-            }
-        }
-
-        extensionState.isListening = true;
-        await chrome.storage.local.set({ extensionState });
-        updateExtensionBadge();
-
-        console.log(`Wake word detection started on ${startedCount}/${tabs.length} tabs`);
-        return { success: true, message: `Started on ${startedCount} tabs` };
-    } catch (error) {
-        console.error('Error starting wake word detection:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-async function stopWakeWordDetection() {
-    try {
-        const tabs = await chrome.tabs.query({});
-        let stoppedCount = 0;
-
-        for (const tab of tabs) {
-            try {
-                await chrome.tabs.sendMessage(tab.id, {
-                    type: 'STOP_WAKE_WORD_DETECTION',
-                    action: 'stop_wake_word_detection'
-                });
-                stoppedCount++;
-            } catch (error) {
-                // Ignore errors
-            }
-        }
-
-        extensionState.isListening = false;
-        extensionState.isAwake = false;
-        await chrome.storage.local.set({ extensionState });
-        updateExtensionBadge();
-
-        console.log(`Wake word detection stopped on ${stoppedCount}/${tabs.length} tabs`);
-        return { success: true };
-    } catch (error) {
-        console.error('Error stopping wake word detection:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-async function stopAllListening() {
-    await stopWakeWordDetection();
-    console.log('🛑 All listening stopped');
-}
-
-// ===== ENHANCED VOICE COMMAND PROCESSING WITH OVERLAY SUPPORT =====
-
-async function processVoiceCommand(transcript) {
-    console.log('🗣️ Processing voice command:', transcript);
-
-    if (!transcript || transcript.trim().length === 0) {
-        return { success: false, message: 'No command detected' };
-    }
-
-    try {
-        // Show processing indicator if extensionState.activeTab exists
-        if (extensionState.activeTab) {
-            chrome.tabs.sendMessage(extensionState.activeTab, {
-                type: 'COMMAND_PROCESSING',
-                command: transcript
-            }).catch(() => {}); // Ignore errors if tab doesn't exist
-        }
-
-        updateExtensionBadge();
-
-        // Use enhanced command processor for hardcoded commands
-        if (!commandExecutor) {
-            commandExecutor = new EnhancedCommandExecutor();
-        }
-
-        console.log('🎯 Processing with enhanced command executor...');
-        const result = await commandExecutor.processVoiceCommand(transcript);
-        console.log('✅ Command processing result:', result);
-
-        // Show result overlay
-        if (extensionState.activeTab) {
-            if (result.success) {
-                chrome.tabs.sendMessage(extensionState.activeTab, {
-                    type: 'COMMAND_SUCCESS',
-                    message: result.message || 'Command executed successfully'
-                }).catch(() => {});
-            } else {
-                chrome.tabs.sendMessage(extensionState.activeTab, {
-                    type: 'COMMAND_ERROR',
-                    error: result.message || 'Command failed'
-                }).catch(() => {});
-            }
-        }
-
-        // Update badge and hide indicator based on result
-        updateExtensionBadge();
-
-        // Hide listening indicator after delay
-        setTimeout(async () => {
-            extensionState.isAwake = false;
-            await stopAllListening();
-            updateExtensionBadge();
-        }, 2000);
-
-        // Notify popup
+    async initialize() {
         try {
-            chrome.runtime.sendMessage({
-                type: result.success ? 'COMMAND_PROCESSED' : 'COMMAND_ERROR',
-                result: result.message,
-                error: result.success ? null : result.message
-            });
-        } catch (e) {
-            // Popup might not be open
-        }
-
-        return result;
-
-    } catch (error) {
-        console.error('Voice command processing error:', error);
-
-        // Show error overlay
-        if (extensionState.activeTab) {
-            chrome.tabs.sendMessage(extensionState.activeTab, {
-                type: 'COMMAND_ERROR',
-                error: error.message || 'An error occurred'
-            }).catch(() => {});
-        }
-
-        // Hide indicators and reset state
-        setTimeout(async () => {
-            extensionState.isAwake = false;
-            await stopAllListening();
-            updateExtensionBadge();
-        }, 2000);
-
-        // Notify popup of error
-        try {
-            chrome.runtime.sendMessage({
-                type: 'COMMAND_ERROR',
-                error: error.message
-            });
-        } catch (e) {
-            // Popup might not be open
-        }
-
-        return { 
-            success: false, 
-            message: `Error processing command: ${error.message}` 
-        };
-    }
-}
-
-async function handleWakeWord(keyword) {
-    console.log('👂 Wake word detected:', keyword);
-
-    extensionState.isAwake = true;
-    extensionState.lastActivity = Date.now();
-
-    // Send message to show overlay on sender tab
-    if (extensionState.activeTab) {
-        chrome.tabs.sendMessage(extensionState.activeTab, {
-            type: 'WAKE_WORD_DETECTED',
-            keyword: keyword
-        }).catch(() => {});
-    }
-
-    // Show listening indicator on active tab (for backward compatibility)
-    if (extensionState.activeTab) {
-        chrome.tabs.sendMessage(extensionState.activeTab, {
-            type: 'SHOW_LISTENING_INDICATOR',
-            state: 'listening',
-            message: 'Listening for command...'
-        }).catch(() => {});
-    }
-
-    // Notify popup
-    try {
-        chrome.runtime.sendMessage({ type: 'WAKE_WORD_DETECTED' });
-    } catch (e) {
-        // Popup might not be open
-    }
-
-    updateExtensionBadge();
-
-    // Start listening timeout
-    setTimeout(async () => {
-        if (extensionState.isAwake) {
-            console.log('⏰ Wake word timeout');
-
-            // Send hide overlay message to all tabs
-            const tabs = await chrome.tabs.query({});
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, {
-                    type: 'HIDE_OVERLAY'
-                }).catch(() => {}); // Ignore errors
-            });
-
-            extensionState.isAwake = false;
-            await stopAllListening();
-            updateExtensionBadge();
-        }
-    }, 10000); // 10 second timeout
-
-    return { 
-        success: true, 
-        message: 'Wake word detected, listening for command...' 
-    };
-}
-
-// ===== MESSAGE HANDLING WITH OVERLAY INTEGRATION =====
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('📨 Message received:', request.action || request.type);
-
-    const handleMessage = async () => {
-        try {
-            extensionState.lastActivity = Date.now();
-            const action = request.action || request.type;
-
-            switch (action) {
-                // Permission-related messages
-                case 'permissions_granted':
-                    await handlePermissionGranted();
-                    return { success: true };
-
-                case 'permissions_denied':
-                    await handlePermissionDenied();
-                    return { success: true };
-
-                // Wake word and voice command messages with overlay support
-                case 'wake_word_detected':
-                case 'wakeworddetected':
-                    // Send message to show overlay
-                    if (sender.tab) {
-                        chrome.tabs.sendMessage(sender.tab.id, {
-                            type: 'WAKE_WORD_DETECTED',
-                            keyword: request.keyword || request.transcript
-                        }).catch(() => {});
-                    }
-                    return await handleWakeWord(request.keyword || request.transcript);
-
-                case 'voice_command':
-                case 'voicecommand':
-                    // Show processing overlay
-                    if (sender.tab) {
-                        chrome.tabs.sendMessage(sender.tab.id, {
-                            type: 'COMMAND_PROCESSING',
-                            command: request.transcript
-                        }).catch(() => {});
-                    }
-
-                    const result = await processVoiceCommand(request.transcript);
-
-                    // Show result overlay (already handled in processVoiceCommand)
-                    return result;
-
-                // Extension control messages
-                case 'GET_EXTENSION_STATUS':
-                    return {
-                        success: true,
-                        isEnabled: extensionState.isEnabled,
-                        isListening: extensionState.isListening,
-                        isAwake: extensionState.isAwake,
-                        lastActivity: extensionState.lastActivity,
-                        activeTab: extensionState.activeTab,
-                        permissionsGranted: extensionState.permissionsGranted,
-                        microphonePermission: extensionState.microphonePermission
-                    };
-
-                case 'TOGGLE_EXTENSION':
-                    if (!extensionState.permissionsGranted) {
-                        return { success: false, error: 'Microphone permission not granted' };
-                    }
-
-                    extensionState.isEnabled = !extensionState.isEnabled;
-
-                    if (extensionState.isEnabled) {
-                        const startResult = await startWakeWordDetection();
-                        console.log(`Extension enabled, wake word detection: ${startResult.success ? 'started' : 'failed'}`);
-                    } else {
-                        await stopAllListening();
-                        console.log('Extension disabled, all listening stopped');
-                    }
-
-                    await chrome.storage.local.set({ extensionState });
-                    updateExtensionBadge();
-
-                    return { success: true, isEnabled: extensionState.isEnabled };
-
-                case 'START_WAKE_WORD_DETECTION':
-                    if (!extensionState.permissionsGranted) {
-                        return { success: false, error: 'Microphone permission not granted' };
-                    }
-                    return await startWakeWordDetection();
-
-                case 'STOP_WAKE_WORD_DETECTION':
-                    return await stopWakeWordDetection();
-
-                // Content script readiness
-                case 'CONTENT_SCRIPT_READY':
-                    console.log('📄 Content script ready in tab', sender.tab?.id || 'unknown');
-
-                    if (extensionState.isEnabled && extensionState.permissionsGranted && sender.tab) {
-                        await initializeWakeWordInTab(sender.tab.id);
-                    }
-
-                    return {
-                        success: true,
-                        extensionState: extensionState,
-                        message: 'Background script connected'
-                    };
-
-                // Get available commands
-                case 'GET_AVAILABLE_COMMANDS':
-                    if (!commandExecutor) {
-                        commandExecutor = new EnhancedCommandExecutor();
-                    }
-                    return {
-                        success: true,
-                        commands: commandExecutor.processor.getAvailableCommands()
-                    };
-
-                default:
-                    console.warn('Unknown message type:', action);
-                    return { success: false, error: 'Unknown message type' };
+            const result = await chrome.storage.local.get(['geminiApiKey']);
+            this.geminiApiKey = result.geminiApiKey;
+            this.isInitialized = !!this.geminiApiKey;
+            console.log('🔑 Gemini initialized, has key:', !!this.geminiApiKey);
+            if (this.isInitialized) {
+                console.log('✅ Gemini API key length:', this.geminiApiKey.length);
             }
         } catch (error) {
-            console.error('Message handling error:', error);
-
-            // Show error overlay
-            if (sender.tab) {
-                chrome.tabs.sendMessage(sender.tab.id, {
-                    type: 'COMMAND_ERROR',
-                    error: error.message || 'An error occurred'
-                }).catch(() => {});
-            }
-
-            return { success: false, error: error.message };
+            console.error('❌ Gemini initialization error:', error);
+            this.isInitialized = false;
         }
-    };
+    }
 
-    handleMessage().then(sendResponse);
-    return true; // Keep message channel open for async response
-});
+    async setApiKey(apiKey) {
+        console.log('🔐 setApiKey called, key length:', apiKey?.length);
 
-// ===== UTILITY FUNCTIONS =====
-
-function updateExtensionBadge() {
-    try {
-        let badgeText = '';
-        let badgeColor = '#EF4444';
-
-        if (!extensionState.permissionsGranted) {
-            badgeText = '!';
-            badgeColor = '#F59E0B';
-        } else if (extensionState.isEnabled) {
-            if (extensionState.isAwake) {
-                badgeText = '👂';
-                badgeColor = '#22C55E';
-            } else if (extensionState.isListening) {
-                badgeText = '●';
-                badgeColor = '#1B365D';
-            } else {
-                badgeText = '○';
-                badgeColor = '#6B7280';
-            }
+        if (!apiKey || apiKey.length < 20) {
+            console.error('❌ Invalid API key provided');
+            return { success: false, error: 'Invalid API key - must be at least 20 characters' };
         }
 
-        chrome.action.setBadgeText({ text: badgeText });
-        chrome.action.setBadgeBackgroundColor({ color: badgeColor });
-        console.log(`Badge updated: ${badgeText} (${badgeColor})`);
-    } catch (error) {
-        console.warn('Badge update failed:', error);
-    }
-}
-
-// ===== TAB EVENT LISTENERS =====
-
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    currentTabId = activeInfo.tabId;
-    extensionState.activeTab = activeInfo.tabId;
-    console.log(`Tab activated: ${activeInfo.tabId}`);
-
-    if (extensionState.isEnabled && extensionState.permissionsGranted) {
-        await initializeWakeWordInTab(activeInfo.tabId);
-    }
-});
-
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && extensionState.isEnabled && extensionState.permissionsGranted) {
-        await initializeWakeWordInTab(tabId);
-        console.log(`Tab ${tabId} loaded: ${tab.url}`);
-    }
-});
-
-// ===== ENHANCED COMMAND PROCESSING CLASSES =====
-
-// Enhanced Command Processor with Hardcoded Commands
-class EnhancedCommandProcessor {
-    constructor() {
-        this.hardcodedCommands = this.initializeHardcodedCommands();
-        console.log('🎯 Enhanced Command Processor initialized with hardcoded commands');
-    }
-
-    initializeHardcodedCommands() {
-        return {
-            new_tab: {
-                patterns: [
-                    /(?:hey rupert,?\s+)?(?:open\s+(?:a\s+)?new\s+tab|new\s+tab|create\s+(?:a\s+)?new\s+tab)/i,
-                    /(?:hey rupert,?\s+)?(?:open\s+tab|new\s+browser\s+tab)/i
-                ],
-                action: 'new_tab',
-                confidence: 0.95,
-                description: 'Opens a new browser tab'
-            },
-            open_amazon: {
-                patterns: [
-                    /(?:hey rupert,?\s+)?(?:open\s+amazon|go\s+to\s+amazon|amazon\.com)/i,
-                    /(?:hey rupert,?\s+)?(?:navigate\s+to\s+amazon|visit\s+amazon)/i
-                ],
-                action: 'open_website',
-                url: 'https://amazon.com',
-                confidence: 0.95,
-                description: 'Opens Amazon.com in a new tab'
-            },
-            search_web: {
-                patterns: [
-                    /(?:hey rupert,?\s+)?(?:search\s+(?:for\s+)?(.+)|google\s+(?:search\s+)?(.+))/i
-                ],
-                action: 'search',
-                confidence: 0.85,
-                description: 'Searches Google for the specified term'
-            }
-        };
-    }
-
-    parseCommand(transcript) {
-        console.log('🔍 Parsing command:', transcript);
-
-        if (!transcript || transcript.trim().length === 0) {
-            return { action: 'unknown', confidence: 0 };
-        }
-
-        const cleanTranscript = transcript.toLowerCase().trim();
-
-        // Check hardcoded commands
-        for (const [commandKey, command] of Object.entries(this.hardcodedCommands)) {
-            for (const pattern of command.patterns) {
-                const match = cleanTranscript.match(pattern);
-                if (match) {
-                    console.log(`🎯 Matched hardcoded command: ${commandKey}`);
-
-                    const result = {
-                        action: command.action,
-                        confidence: command.confidence,
-                        explanation: command.description,
-                        matched_command: commandKey
-                    };
-
-                    // Add URL for website commands
-                    if (command.url) {
-                        result.url = command.url;
-                    }
-
-                    // Extract search terms
-                    if (command.action === 'search' && match[1]) {
-                        result.target = match[1].trim();
-                    }
-
-                    return result;
-                }
-            }
-        }
-
-        return { action: 'unknown', confidence: 0, transcript: cleanTranscript };
-    }
-
-    getAvailableCommands() {
-        return Object.entries(this.hardcodedCommands).map(([key, cmd]) => ({
-            command: key,
-            description: cmd.description,
-            examples: cmd.patterns.map(p => p.source.substring(0, 50))
-        }));
-    }
-}
-
-// Enhanced Command Executor
-class EnhancedCommandExecutor {
-    constructor() {
-        this.processor = new EnhancedCommandProcessor();
-        console.log('⚡ Enhanced Command Executor initialized');
-    }
-
-    async executeCommand(parsedCommand) {
-        console.log('⚡ Executing enhanced command:', parsedCommand);
-
-        if (parsedCommand.confidence < 0.7) {
-            return {
-                success: false,
-                message: `I'm not confident about that command. Try "hey rupert open new tab" or "hey rupert open amazon".`
-            };
-        }
+        this.geminiApiKey = apiKey;
+        this.isInitialized = true;
 
         try {
-            switch (parsedCommand.action) {
-                case 'new_tab':
-                    const newTab = await chrome.tabs.create({ url: 'chrome://newtab/', active: true });
-                    return {
-                        success: true,
-                        message: 'Opened a new tab',
-                        tabId: newTab.id
-                    };
-
-                case 'open_website':
-                    const websiteTab = await chrome.tabs.create({ url: parsedCommand.url, active: true });
-                    return {
-                        success: true,
-                        message: parsedCommand.explanation,
-                        tabId: websiteTab.id
-                    };
-
-                case 'search':
-                    if (!parsedCommand.target) {
-                        return { success: false, message: 'No search term provided' };
-                    }
-                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(parsedCommand.target)}`;
-                    const searchTab = await chrome.tabs.create({ url: searchUrl, active: true });
-                    return {
-                        success: true,
-                        message: `Searching Google for "${parsedCommand.target}"`,
-                        tabId: searchTab.id
-                    };
-
-                default:
-                    return {
-                        success: false,
-                        message: 'Unknown command. Try "hey rupert open new tab" or "hey rupert open amazon".'
-                    };
-            }
+            await chrome.storage.local.set({ geminiApiKey: apiKey });
+            console.log('✅ API key stored successfully in Chrome storage');
+            return { success: true, enabled: true, message: 'API key saved successfully' };
         } catch (error) {
-            console.error('Command execution error:', error);
-            return {
-                success: false,
-                message: `Error executing command: ${error.message}`
-            };
+            console.error('❌ Error storing API key:', error);
+            this.isInitialized = false;
+            return { success: false, error: 'Failed to store API key: ' + error.message };
         }
     }
 
     async processVoiceCommand(transcript) {
-        console.log('🎤 Processing voice command:', transcript);
-        const parsedCommand = this.processor.parseCommand(transcript);
-        console.log('📋 Parsed command:', parsedCommand);
+        console.log('🎯 Processing voice command:', transcript);
 
-        const result = await this.executeCommand(parsedCommand);
-        console.log('✅ Execution result:', result);
+        if (!this.isInitialized) {
+            console.error('❌ Gemini AI not configured');
+            return { success: false, message: 'Gemini AI not configured - please add API key' };
+        }
 
-        return result;
+        if (!transcript || transcript.trim().length === 0) {
+            console.error('❌ Empty transcript provided');
+            return { success: false, message: 'No command provided' };
+        }
+
+        try {
+            console.log('📡 Calling Gemini API for command processing...');
+            const prompt = this.createCommandPrompt(transcript.trim());
+            const aiResponse = await this.callGeminiAPI(prompt);
+            console.log('📥 Raw AI response received:', aiResponse.substring(0, 200) + '...');
+
+            const parsedCommand = this.parseAIResponse(aiResponse);
+            console.log('🔍 Parsed command:', parsedCommand);
+
+            if (!parsedCommand.success) {
+                return parsedCommand;
+            }
+
+            console.log('⚡ Executing command:', parsedCommand.action);
+            return await this.executeCommand(parsedCommand);
+        } catch (error) {
+            console.error('❌ Voice command processing error:', error);
+            return { 
+                success: false, 
+                message: 'Error processing command: ' + error.message,
+                error: error.message 
+            };
+        }
+    }
+
+    createCommandPrompt(transcript) {
+        return `You are Rupert, an AI voice assistant for web browsing. Analyze this voice command and return a JSON response.
+
+Voice Command: "${transcript}"
+
+Available actions:
+- navigate: Go to a website (provide full URL in "url" field)
+- search: Search Google (provide search terms in "query" field)
+- newtab: Open new tab
+- closetab: Close current tab  
+- scroll: Scroll page (provide "up" or "down" in "direction" field)
+
+Response format (return ONLY valid JSON):
+{
+  "success": true,
+  "action": "navigate",
+  "url": "https://example.com",
+  "query": "search terms",
+  "direction": "up",
+  "confidence": 0.85,
+  "explanation": "Opening example.com"
+}
+
+For navigation commands like "open Amazon", "go to YouTube", etc., use action "navigate" with full URLs.
+For search commands like "search for cats", use action "search" with the search terms.
+For scroll commands, use action "scroll" with direction "up" or "down".
+
+Return ONLY valid JSON, no other text.`;
+    }
+
+    async callGeminiAPI(prompt) {
+        console.log('📡 Making Gemini API request with CURRENT WORKING MODEL...');
+
+        // UPDATED: Using the v1 API with the current working model name
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${this.geminiApiKey}`;
+
+        try {
+            console.log('🔗 Using API v1 with model: gemini-pro');
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.1,
+                        topK: 1,
+                        maxOutputTokens: 1024
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Gemini API HTTP error:', response.status, errorText);
+
+                // If v1 fails, try v1beta with different model
+                console.log('🔄 Trying fallback model...');
+                return await this.callGeminiFallback(prompt);
+            }
+
+            const data = await response.json();
+            console.log('📊 Gemini API raw response:', data);
+
+            if (!data.candidates || data.candidates.length === 0) {
+                throw new Error('No candidates in Gemini response');
+            }
+
+            const responseText = data.candidates[0]?.content?.parts?.[0]?.text;
+
+            if (!responseText) {
+                throw new Error('No response text from Gemini API');
+            }
+
+            console.log('✅ Gemini API response text received, length:', responseText.length);
+            return responseText;
+        } catch (error) {
+            console.error('❌ Gemini API call failed:', error);
+            console.log('🔄 Trying fallback approach...');
+            return await this.callGeminiFallback(prompt);
+        }
+    }
+
+    async callGeminiFallback(prompt) {
+        console.log('🔄 Using fallback API approach...');
+
+        // Try with different API version and model
+        const fallbackUrls = [
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${this.geminiApiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${this.geminiApiKey}`,
+            `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`
+        ];
+
+        for (const url of fallbackUrls) {
+            try {
+                console.log('🔗 Trying URL:', url);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: prompt }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.1,
+                            maxOutputTokens: 1024
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (responseText) {
+                        console.log('✅ Fallback API succeeded with:', url);
+                        return responseText;
+                    }
+                }
+            } catch (error) {
+                console.log('❌ Fallback attempt failed:', error.message);
+                continue;
+            }
+        }
+
+        // If all API calls fail, use manual command parsing
+        console.log('🔧 All API calls failed, using manual parsing');
+        return this.parseCommandManually(prompt);
+    }
+
+    parseCommandManually(prompt) {
+        // Extract the voice command from the prompt
+        const commandMatch = prompt.match(/Voice Command: "(.+?)"/);
+        const command = commandMatch ? commandMatch[1].toLowerCase() : '';
+
+        console.log('🔧 Manual parsing for command:', command);
+
+        // Manual command detection
+        if (command.includes('open') || command.includes('go to')) {
+            if (command.includes('amazon')) {
+                return JSON.stringify({
+                    success: true,
+                    action: 'navigate',
+                    url: 'https://amazon.com',
+                    explanation: 'Opening Amazon'
+                });
+            } else if (command.includes('google')) {
+                return JSON.stringify({
+                    success: true,
+                    action: 'navigate',
+                    url: 'https://google.com',
+                    explanation: 'Opening Google'
+                });
+            } else if (command.includes('youtube')) {
+                return JSON.stringify({
+                    success: true,
+                    action: 'navigate',
+                    url: 'https://youtube.com',
+                    explanation: 'Opening YouTube'
+                });
+            } else if (command.includes('new tab')) {
+                return JSON.stringify({
+                    success: true,
+                    action: 'newtab',
+                    explanation: 'Opening new tab'
+                });
+            }
+        } else if (command.includes('search')) {
+            const searchTerms = command.replace(/.*search (for )?/i, '').trim();
+            return JSON.stringify({
+                success: true,
+                action: 'search',
+                query: searchTerms || 'search query',
+                explanation: `Searching for ${searchTerms}`
+            });
+        } else if (command.includes('scroll')) {
+            const direction = command.includes('up') ? 'up' : 'down';
+            return JSON.stringify({
+                success: true,
+                action: 'scroll',
+                direction: direction,
+                explanation: `Scrolling ${direction}`
+            });
+        } else if (command.includes('close')) {
+            return JSON.stringify({
+                success: true,
+                action: 'closetab',
+                explanation: 'Closing current tab'
+            });
+        }
+
+        // Default fallback
+        return JSON.stringify({
+            success: false,
+            message: 'Could not understand the command. Try saying "Hey Rupert, open Google" or "Hey Rupert, search for cats"'
+        });
+    }
+
+    parseAIResponse(responseText) {
+        try {
+            console.log('🔍 Parsing AI response:', responseText);
+
+            // Try to extract JSON from the response
+            let jsonText = responseText.trim();
+
+            // Look for JSON block markers
+            const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || 
+                            responseText.match(/```\s*([\s\S]*?)\s*```/) ||
+                            responseText.match(/\{[\s\S]*\}/);
+
+            if (jsonMatch) {
+                jsonText = jsonMatch[1] || jsonMatch[0];
+                console.log('📋 Extracted JSON text:', jsonText);
+            }
+
+            const parsed = JSON.parse(jsonText);
+            console.log('✅ Successfully parsed JSON:', parsed);
+
+            // Validate required fields
+            if (!parsed.success) {
+                console.error('❌ AI response indicates failure:', parsed);
+                return { 
+                    success: false, 
+                    message: parsed.message || 'AI could not process the command' 
+                };
+            }
+
+            if (!parsed.action) {
+                console.error('❌ No action specified in AI response');
+                return { 
+                    success: false, 
+                    message: 'No action specified in AI response' 
+                };
+            }
+
+            console.log('✅ Valid command parsed:', parsed.action);
+            return parsed;
+
+        } catch (error) {
+            console.error('❌ JSON parse error:', error);
+            console.log('Raw response that failed to parse:', responseText);
+
+            // If JSON parsing fails, try manual parsing
+            const manualResult = this.parseCommandManually(responseText);
+            try {
+                return JSON.parse(manualResult);
+            } catch (e) {
+                return { 
+                    success: false, 
+                    message: 'Could not understand the command. Please try rephrasing.' 
+                };
+            }
+        }
+    }
+
+    async executeCommand(command) {
+        console.log('⚡ Executing command:', command.action, command);
+
+        try {
+            switch (command.action.toLowerCase()) {
+                case 'navigate':
+                    return await this.executeNavigate(command);
+                case 'search':
+                    return await this.executeSearch(command);
+                case 'newtab':
+                    return await this.executeNewTab();
+                case 'closetab':
+                    return await this.executeCloseTab();
+                case 'scroll':
+                    return await this.executeScroll(command);
+                default:
+                    console.error('❌ Unknown action:', command.action);
+                    return { 
+                        success: false, 
+                        message: `Unknown action: ${command.action}. Available actions: navigate, search, newtab, closetab, scroll` 
+                    };
+            }
+        } catch (error) {
+            console.error('❌ Command execution error:', error);
+            return { 
+                success: false, 
+                message: 'Execution error: ' + error.message,
+                error: error.message 
+            };
+        }
+    }
+
+    async executeNavigate(command) {
+        console.log('🌐 Executing navigation to:', command.url);
+
+        let url = command.url || command.target || command.site;
+
+        if (!url) {
+            console.error('❌ No URL provided for navigation');
+            return { success: false, message: 'No URL provided for navigation' };
+        }
+
+        // Handle common site shortcuts
+        const shortcuts = {
+            'amazon': 'https://amazon.com',
+            'google': 'https://google.com',
+            'youtube': 'https://youtube.com',
+            'github': 'https://github.com',
+            'facebook': 'https://facebook.com',
+            'twitter': 'https://twitter.com',
+            'reddit': 'https://reddit.com',
+            'netflix': 'https://netflix.com'
+        };
+
+        if (shortcuts[url.toLowerCase()]) {
+            url = shortcuts[url.toLowerCase()];
+            console.log('🔗 Using shortcut URL:', url);
+        } else if (url && !url.startsWith('http')) {
+            if (!url.includes('.')) {
+                // If no domain, search instead
+                console.log('🔍 No domain found, switching to search');
+                return await this.executeSearch({ query: url });
+            }
+            url = 'https://' + url;
+        }
+
+        try {
+            const tab = await chrome.tabs.create({ url: url, active: true });
+            console.log('✅ Navigation successful, tab ID:', tab.id);
+            return { 
+                success: true, 
+                message: command.explanation || `Opened ${url}`,
+                tabId: tab.id,
+                url: url
+            };
+        } catch (error) {
+            console.error('❌ Navigation failed:', error);
+            return { 
+                success: false, 
+                message: 'Failed to navigate to ' + url + ': ' + error.message 
+            };
+        }
+    }
+
+    async executeSearch(command) {
+        console.log('🔍 Executing search for:', command.query);
+
+        const query = command.query || command.target || command.data || command.search;
+        if (!query) {
+            console.error('❌ No search query provided');
+            return { success: false, message: 'No search term provided' };
+        }
+
+        try {
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            const tab = await chrome.tabs.create({ url: searchUrl, active: true });
+            console.log('✅ Search successful, tab ID:', tab.id);
+            return { 
+                success: true, 
+                message: `Searching for "${query}"`,
+                tabId: tab.id,
+                query: query,
+                url: searchUrl
+            };
+        } catch (error) {
+            console.error('❌ Search failed:', error);
+            return { 
+                success: false, 
+                message: 'Failed to search for ' + query + ': ' + error.message 
+            };
+        }
+    }
+
+    async executeNewTab() {
+        console.log('📄 Opening new tab');
+
+        try {
+            const tab = await chrome.tabs.create({ url: 'chrome://newtab/', active: true });
+            console.log('✅ New tab created, tab ID:', tab.id);
+            return { 
+                success: true, 
+                message: 'Opened new tab',
+                tabId: tab.id 
+            };
+        } catch (error) {
+            console.error('❌ New tab failed:', error);
+            return { 
+                success: false, 
+                message: 'Failed to open new tab: ' + error.message 
+            };
+        }
+    }
+
+    async executeCloseTab() {
+        console.log('❌ Closing current tab');
+
+        try {
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs.length > 0) {
+                await chrome.tabs.remove(tabs[0].id);
+                console.log('✅ Tab closed successfully, tab ID:', tabs[0].id);
+                return { success: true, message: 'Closed current tab' };
+            } else {
+                console.log('❌ No active tab found to close');
+                return { success: false, message: 'No active tab found to close' };
+            }
+        } catch (error) {
+            console.error('❌ Close tab failed:', error);
+            return { 
+                success: false, 
+                message: 'Failed to close tab: ' + error.message 
+            };
+        }
+    }
+
+    async executeScroll(command) {
+        console.log('📜 Executing scroll:', command.direction);
+
+        const direction = command.direction || command.target || 'down';
+
+        try {
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+
+            if (tabs.length > 0) {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tabs[0].id },
+                    func: function(dir) {
+                        const amount = dir === 'up' ? -500 : 500;
+                        window.scrollBy({
+                            top: amount,
+                            behavior: 'smooth'
+                        });
+                    },
+                    args: [direction.toLowerCase()]
+                });
+                console.log('✅ Scroll executed successfully:', direction);
+                return { success: true, message: `Scrolled ${direction}` };
+            } else {
+                console.log('❌ No active tab found for scrolling');
+                return { success: false, message: 'No active tab found' };
+            }
+        } catch (error) {
+            console.error('❌ Scroll failed:', error);
+            return { 
+                success: false, 
+                message: 'Cannot scroll on this page: ' + error.message 
+            };
+        }
     }
 }
 
-console.log('✅ Enhanced Rupert Background Service Worker Initialized with Command Overlay Support');
-console.log('🎯 Supported commands: "hey rupert open new tab", "hey rupert open amazon"');
-console.log('🎭 Command overlay integration enabled');
+// Initialize extension
+chrome.runtime.onInstalled.addListener(async function(details) {
+    console.log('🔧 Extension Installed/Updated with ROBUST MODEL HANDLING:', details.reason);
+
+    try {
+        console.log('🤖 Initializing Gemini Voice Assistant with fallback support...');
+        geminiAssistant = new GeminiVoiceAssistant();
+
+        console.log('📚 Loading saved extension state...');
+        const savedState = await chrome.storage.local.get(['extensionState', 'geminiApiKey', 'microphonePermission']);
+
+        if (savedState.extensionState) {
+            extensionState = Object.assign({}, extensionState, savedState.extensionState);
+            console.log('📊 Restored extension state:', extensionState);
+        }
+
+        extensionState.geminiConfigured = !!savedState.geminiApiKey;
+        extensionState.microphonePermission = !!savedState.microphonePermission;
+        extensionState.permissionsGranted = extensionState.microphonePermission;
+
+        console.log('🔧 Extension state initialized:', {
+            geminiConfigured: extensionState.geminiConfigured,
+            microphonePermission: extensionState.microphonePermission,
+            permissionsGranted: extensionState.permissionsGranted
+        });
+
+        updateExtensionBadge();
+        console.log('✅ AI Assistant initialized successfully with ROBUST MODEL HANDLING');
+    } catch (error) {
+        console.error('❌ Initialization error:', error);
+    }
+});
+
+// Enhanced message handler with better error handling
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    const action = request.action || request.type;
+    console.log('📨 Message received:', action, 'from:', sender.tab?.id || 'popup');
+
+    const handleMessage = async function() {
+        try {
+            switch (action) {
+                case 'permissions_granted':
+                    console.log('✅ Microphone permissions granted');
+                    extensionState.microphonePermission = true;
+                    extensionState.permissionsGranted = true;
+                    await chrome.storage.local.set({ 
+                        microphonePermission: true, 
+                        extensionState: extensionState 
+                    });
+                    updateExtensionBadge();
+                    return { success: true, message: 'Permissions granted successfully' };
+
+                case 'permissions_denied':
+                    console.log('❌ Microphone permissions denied');
+                    extensionState.microphonePermission = false;
+                    extensionState.permissionsGranted = false;
+                    await chrome.storage.local.set({ 
+                        microphonePermission: false, 
+                        extensionState: extensionState 
+                    });
+                    updateExtensionBadge();
+                    return { success: false, message: 'Permissions denied' };
+
+                case 'wake_word_detected':
+                    console.log('👂 Wake word detected:', request.keyword);
+                    return await handleWakeWord(request.keyword || 'hey rupert');
+
+                case 'voice_command':
+                    console.log('🎯 Voice command received:', request.transcript);
+                    return await processVoiceCommand(request.transcript);
+
+                case 'SET_GEMINI_API_KEY':
+                    console.log('🔐 Setting Gemini API key, length:', request.apiKey?.length);
+                    if (!geminiAssistant) {
+                        console.log('🤖 Creating new Gemini assistant instance');
+                        geminiAssistant = new GeminiVoiceAssistant();
+                    }
+
+                    const setResult = await geminiAssistant.setApiKey(request.apiKey);
+                    console.log('📊 API key set result:', setResult);
+
+                    if (setResult.success) {
+                        extensionState.geminiConfigured = true;
+                        await chrome.storage.local.set({ extensionState });
+                        updateExtensionBadge();
+                        console.log('✅ Gemini API configured successfully');
+                    } else {
+                        console.error('❌ Failed to configure Gemini API:', setResult.error);
+                    }
+
+                    return setResult;
+
+                case 'GET_EXTENSION_STATUS':
+                    console.log('📊 Getting extension status');
+                    const status = {
+                        success: true,
+                        ...extensionState,
+                        timestamp: Date.now()
+                    };
+                    console.log('📤 Returning status:', status);
+                    return status;
+
+                case 'TOGGLE_EXTENSION':
+                    console.log('🔄 Toggling extension, current state:', extensionState.isEnabled);
+
+                    if (!extensionState.permissionsGranted) {
+                        console.error('❌ Cannot toggle - microphone permission not granted');
+                        return { 
+                            success: false, 
+                            error: 'Microphone permission not granted. Please allow microphone access first.' 
+                        };
+                    }
+
+                    if (!extensionState.geminiConfigured) {
+                        console.error('❌ Cannot toggle - API key not configured');
+                        return { 
+                            success: false, 
+                            error: 'Gemini API key not configured. Please add your API key first.' 
+                        };
+                    }
+
+                    extensionState.isEnabled = !extensionState.isEnabled;
+                    console.log('🎯 Extension toggled to:', extensionState.isEnabled);
+
+                    await chrome.storage.local.set({ extensionState });
+                    updateExtensionBadge();
+
+                    return { 
+                        success: true, 
+                        isEnabled: extensionState.isEnabled,
+                        message: `Extension ${extensionState.isEnabled ? 'enabled' : 'disabled'} successfully`
+                    };
+
+                case 'TEST_AI_COMMAND':
+                    console.log('🧪 Testing AI command:', request.command);
+                    const testResult = await processVoiceCommand(request.command || 'open google');
+                    console.log('🧪 Test result:', testResult);
+                    return testResult;
+
+                default:
+                    console.warn('❓ Unknown action received:', action);
+                    return { 
+                        success: false, 
+                        error: 'Unknown action: ' + action 
+                    };
+            }
+        } catch (error) {
+            console.error('❌ Message handler error:', error);
+            return { 
+                success: false, 
+                error: 'Message handler error: ' + error.message,
+                details: error.stack 
+            };
+        }
+    };
+
+    // Execute async handler and send response
+    handleMessage()
+        .then(function(result) {
+            console.log('📤 Sending response:', result);
+            sendResponse(result);
+        })
+        .catch(function(error) {
+            console.error('❌ Handler promise error:', error);
+            sendResponse({ 
+                success: false, 
+                error: error.message,
+                details: error.stack 
+            });
+        });
+
+    return true; // Keep message channel open for async response
+});
+
+async function handleWakeWord(keyword) {
+    console.log('👂 Processing wake word:', keyword);
+    extensionState.isAwake = true;
+
+    try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs.length > 0) {
+            extensionState.activeTab = tabs[0].id;
+        }
+    } catch (error) {
+        console.error('❌ Error getting active tab:', error);
+    }
+
+    updateExtensionBadge('listening');
+
+    setTimeout(() => {
+        if (extensionState.isAwake) {
+            extensionState.isAwake = false;
+            updateExtensionBadge();
+        }
+    }, 15000);
+
+    return { success: true, message: 'Wake word detected - listening for command...' };
+}
+
+async function processVoiceCommand(transcript) {
+    console.log('🎯 Processing voice command:', transcript);
+
+    if (!transcript || !extensionState.geminiConfigured) {
+        const error = !transcript ? 'No transcript provided' : 'Gemini AI not configured';
+        console.error('❌ Cannot process command:', error);
+        return { success: false, message: error };
+    }
+
+    try {
+        updateExtensionBadge('processing');
+
+        if (!geminiAssistant) {
+            console.log('🤖 Creating Gemini assistant instance for command processing');
+            geminiAssistant = new GeminiVoiceAssistant();
+            await geminiAssistant.initialize();
+        }
+
+        const result = await geminiAssistant.processVoiceCommand(transcript);
+        console.log('✅ Command processed:', result);
+
+        updateExtensionBadge(result.success ? 'success' : 'error');
+
+        setTimeout(() => {
+            extensionState.isAwake = false;
+            updateExtensionBadge();
+        }, 3000);
+
+        return result;
+    } catch (error) {
+        console.error('❌ Voice command processing error:', error);
+
+        setTimeout(() => {
+            extensionState.isAwake = false;
+            updateExtensionBadge();
+        }, 3000);
+
+        return { 
+            success: false, 
+            message: 'Error processing command: ' + error.message,
+            error: error.message 
+        };
+    }
+}
+
+function updateExtensionBadge(status) {
+    try {
+        let badgeText = '';
+        let badgeColor = '#EF4444';
+        let title = 'Rupert AI Voice Assistant';
+
+        if (status === 'processing') {
+            badgeText = '⚡';
+            badgeColor = '#F59E0B';
+            title = 'Processing voice command...';
+        } else if (status === 'listening') {
+            badgeText = '👂';
+            badgeColor = '#22C55E';
+            title = 'Listening for voice command...';
+        } else if (status === 'success') {
+            badgeText = '✅';
+            badgeColor = '#22C55E';
+            title = 'Command executed successfully';
+        } else if (status === 'error') {
+            badgeText = '❌';
+            badgeColor = '#EF4444';
+            title = 'Command execution failed';
+        } else if (!extensionState.permissionsGranted) {
+            badgeText = '🎤';
+            badgeColor = '#F59E0B';
+            title = 'Microphone permission required';
+        } else if (!extensionState.geminiConfigured) {
+            badgeText = '🔑';
+            badgeColor = '#F59E0B';
+            title = 'Gemini API key required';
+        } else if (extensionState.isEnabled) {
+            badgeText = extensionState.isAwake ? '👂' : '🟢';
+            badgeColor = extensionState.isAwake ? '#22C55E' : '#1B365D';
+            title = extensionState.isAwake ? 'Listening for command...' : 'Voice assistant active';
+        } else {
+            badgeText = '🔴';
+            badgeColor = '#6B7280';
+            title = 'Voice assistant disabled';
+        }
+
+        chrome.action.setBadgeText({ text: badgeText });
+        chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+        chrome.action.setTitle({ title: title });
+    } catch (error) {
+        console.warn('❌ Badge update error:', error);
+    }
+}
+
+chrome.tabs.onActivated.addListener(async function(activeInfo) {
+    extensionState.activeTab = activeInfo.tabId;
+    console.log('📄 Tab activated:', activeInfo.tabId);
+});
+
+console.log('🎉 Rupert AI Voice Assistant Background Script Ready with ROBUST MODEL HANDLING');
