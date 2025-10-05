@@ -1,0 +1,35 @@
+/* Rupert Extension Styles */
+.rupert-number-overlay {
+    position: absolute !important;
+    z-index: 999999 !important;
+    background: #ff4444 !important;
+    color: white !important;
+    padding: 4px 8px !important;
+    border-radius: 12px !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    font-family: Arial, sans-serif !important;
+    border: 2px solid #cc0000 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: all 0.2s ease !important;
+    pointer-events: auto !important;
+  }
+  
+  .rupert-number-overlay:hover {
+    background: #cc0000 !important;
+    transform: scale(1.1) !important;
+  }
+  
+  /* Highlight animation for selected elements */
+  @keyframes rupert-highlight {
+    0% { outline-color: #00ff00; }
+    50% { outline-color: #88ff88; }
+    100% { outline-color: #00ff00; }
+  }
+  
+  .rupert-highlighted {
+    animation: rupert-highlight 0.5s ease-in-out 3 !important;
+  }
+  

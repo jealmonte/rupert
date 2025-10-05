@@ -661,3 +661,19 @@ console.log('📊 Initial State:', extensionState);
 globalThis.triggerListening = triggerListening;
 globalThis.setProcessingStatus = setProcessingStatus;
 globalThis.stopListening = stopListening;
+
+chrome.action.onClicked.addListener((tab) => {
+    // Send test command to content script
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'showNumbers',
+      elementType: 'clickable'
+    });
+  });
+  
+  // Listen for messages from content scripts
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'test') {
+      console.log('Background received test message');
+      sendResponse({success: true});
+    }
+  });
