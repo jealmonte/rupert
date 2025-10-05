@@ -34,7 +34,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["config.js", "wake-word-detector.js", "content.js"],
+      "js": ["config.js", "enhanced_speech_recognition_config.js", "wake-word-detector.js", "content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }
