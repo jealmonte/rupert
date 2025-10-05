@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rupert Command Overlay</title>
+    <link rel="stylesheet" href="command-overlay.css">
+</head>
+<body>
+    <!-- Command Processing Overlay -->
+    <div id="rupert-command-overlay" class="command-overlay hidden">
+        <div class="overlay-content">
+            <!-- Wake Word Detection State -->
+            <div class="state-container wake-word-state" id="wakeWordState">
+                <div class="pulse-animation">
+                    <div class="pulse-circle"></div>
+                    <div class="pulse-circle delay-1"></div>
+                    <div class="pulse-circle delay-2"></div>
+                </div>
+                <div class="status-icon">🎤</div>
+                <div class="status-text">Wake word detected!</div>
+                <div class="subtitle">Listening for your command...</div>
+            </div>
+
+            <!-- Command Processing State -->
+            <div class="state-container processing-state hidden" id="processingState">
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                    <div class="spinner-inner"></div>
+                </div>
+                <div class="status-icon">⚡</div>
+                <div class="status-text">Processing command...</div>
+                <div class="subtitle" id="commandText">Please wait</div>
+            </div>
+
+            <!-- Command Success State -->
+            <div class="state-container success-state hidden" id="successState">
+                <div class="checkmark-container">
+                    <div class="checkmark">✓</div>
+                </div>
+                <div class="status-text">Command executed!</div>
+                <div class="subtitle" id="successMessage">Task completed successfully</div>
+            </div>
+
+            <!-- Command Error State -->
+            <div class="state-container error-state hidden" id="errorState">
+                <div class="error-icon">❌</div>
+                <div class="status-text">Command failed</div>
+                <div class="subtitle" id="errorMessage">Please try again</div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="command-overlay.js"></script>
+</body>
+</html>
