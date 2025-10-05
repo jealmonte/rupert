@@ -124,6 +124,37 @@ class RupertDOMController {
           const voiceResult = this.processVoiceCommand(request.command);
           sendResponse({success: voiceResult});
           break;
+        case 'AUTO_START_RUPERT':
+            console.log('🚀 AUTO-START message received - activating Rupert...');
+            
+            // Auto-start wake word detection
+            if (window.enhancedWakeDetector || window.wakeWordDetector) {
+                const detector = window.enhancedWakeDetector || window.wakeWordDetector;
+                
+                if (typeof detector.enable === 'function') {
+                    detector.enable();
+                    console.log('✅ Rupert auto-started and listening');
+                }
+            }
+            
+            sendResponse({ success: true, message: 'Rupert auto-started' });
+            break;
+        
+        case 'DISABLE_RUPERT':
+            console.log('🛑 DISABLE message received - stopping Rupert...');
+            
+            if (window.enhancedWakeDetector || window.wakeWordDetector) {
+                const detector = window.enhancedWakeDetector || window.wakeWordDetector;
+                
+                if (typeof detector.disable === 'function') {
+                    detector.disable();
+                    console.log('🛑 Rupert stopped');
+                }
+            }
+            
+            hideListeningIndicator();
+            sendResponse({ success: true, message: 'Rupert disabled' });
+            break;
       }
       return true;
     });
