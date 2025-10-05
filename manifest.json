@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Rupert Voice Assistant",
+  "version": "1.0.3",
+  "description": "AI-powered voice assistant for Chrome with accessibility features",
+
+  "permissions": [
+    "tabs",
+    "activeTab", 
+    "storage",
+    "scripting"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Rupert Voice Assistant",
+    "default_icon": {
+      "16": "icon_16.png",
+      "32": "icon_32.png", 
+      "48": "icon_48.png",
+      "128": "icon_128.png"
+    }
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "icons": {
+    "16": "icon_16.png",
+    "32": "icon_32.png",
+    "48": "icon_48.png", 
+    "128": "icon_128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}
