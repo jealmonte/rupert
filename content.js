@@ -891,3 +891,184 @@ chrome.runtime.sendMessage({
 });
 
 console.log('✅ Rupert Enhanced Content Script Loaded with Both Features');
+
+function loadCommandOverlay() {
+    // Check if overlay is already loaded
+    if (window.rupertOverlay) {
+        console.log('Command overlay already loaded');
+        return;
+    }
+
+    // Inject the overlay CSS
+    const overlayCSS = document.createElement('link');
+    overlayCSS.rel = 'stylesheet';
+    overlayCSS.href = chrome.runtime.getURL('command-overlay.css');
+    document.head.appendChild(overlayCSS);
+
+    // Inject the overlay script
+    const overlayScript = document.createElement('script');
+    overlayScript.src = chrome.runtime.getURL('command-overlay.js');
+    overlayScript.onload = () => {
+        console.log('✅ Command overlay loaded successfully');
+    };
+    document.head.appendChild(overlayScript);
+}
+
+// Enhanced message listener that integrates with command overlay
+function setupEnhancedMessageListener() {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        console.log('Enhanced content script received message:', message);
+
+        // Handle overlay-specific messages
+        switch (message.type) {
+            case 'WAKE_WORD_DETECTED':
+                // Show wake word detection overlay
+                if (window.rupertOverlay) {
+                    window.rupertOverlay.showWakeWord();
+                }
+                // Also show existing listening indicator for compatibility
+                showListeningIndicator('listening', 'Wake word detected!');
+                break;
+
+            case 'COMMAND_PROCESSING':
+                if (window.rupertOverlay) {
+                    window.rupertOverlay.showProcessing(message.command);
+                }
+                // Update existing indicator
+                showListeningIndicator('processing', 'Processing command...');
+                break;
+
+            case 'COMMAND_SUCCESS':
+                if (window.rupertOverlay) {
+                    window.rupertOverlay.showSuccess(message.message);
+                }
+                // Hide existing indicator after delay
+                setTimeout(() => hideListeningIndicator(), 2000);
+                break;
+
+            case 'COMMAND_ERROR':
+                if (window.rupertOverlay) {
+                    window.rupertOverlay.showError(message.error);
+                }
+                // Show error in existing indicator briefly
+                showListeningIndicator('error', 'Command failed');
+                setTimeout(() => hideListeningIndicator(), 3000);
+                break;
+
+            case 'HIDE_OVERLAY':
+                if (window.rupertOverlay) {
+                    window.rupertOverlay.hide();
+                }
+                hideListeningIndicator();
+                break;
+
+            // Handle existing message types
+            case 'SHOWLISTENINGINDICATOR':
+                // Use overlay if available, otherwise fall back to existing indicator
+                if (window.rupertOverlay && message.state === 'listening') {
+                    window.rupertOverlay.showWakeWord();
+                } else {
+                    showListeningIndicator(message.state, message.message);
+                }
+                break;
+
+            case 'UPDATELISTENINGSTATUS':
+                if (window.rupertOverlay) {
+                    switch (message.state) {
+                        case 'processing':
+                            window.rupertOverlay.showProcessing(message.message);
+                            break;
+                        case 'listening':
+                            window.rupertOverlay.showWakeWord();
+                            break;
+                    }
+                }
+                // Update existing indicator as fallback
+                if (isRupertListening && listeningIndicator) {
+                    const textElement = listeningIndicator.querySelector('#rupert-status-text');
+                    if (textElement && message.message) {
+                        textElement.textContent = message.message;
+                    }
+                    if (message.state) {
+                        listeningIndicator.classList.remove('listening', 'processing', 'error');
+                        listeningIndicator.classList.add(message.state);
+                    }
+                }
+                break;
+
+            default:
+                // Handle other existing message types...
+                break;
+        }
+
+        sendResponse({ success: true });
+        return true;
+    });
+}
+
+// Enhanced initialization function
+function initializeEnhancedRupert() {
+    console.log('Initializing enhanced Rupert with command overlay...');
+
+    // Load the command overlay
+    loadCommandOverlay();
+
+    // Initialize existing DOM Controller
+    const domController = new RupertDOMController();
+    domController.setupDOMKeyboardShortcuts();
+    domController.setupMessageListener();
+
+    // Initialize existing voice assistant features
+    createListeningIndicator();
+    setupVoiceKeyboardShortcuts();
+
+    // Setup enhanced message listener
+    setupEnhancedMessageListener();
+
+    // Expose DOM controller globally
+    window.rupertDOMController = domController;
+
+    console.log('✅ Enhanced Rupert initialized with command overlay support');
+}
+
+// Add keyboard shortcut to test overlay (for development)
+document.addEventListener('keydown', (event) => {
+    // Alt+Shift+O - Test overlay states
+    if (event.altKey && event.shiftKey && event.key === 'O') {
+        event.preventDefault();
+
+        if (window.rupertOverlay) {
+            const states = ['wake-word', 'processing', 'success', 'error'];
+            const currentIndex = states.indexOf(window.rupertOverlay.currentState) || 0;
+            const nextState = states[(currentIndex + 1) % states.length];
+
+            switch (nextState) {
+                case 'wake-word':
+                    window.rupertOverlay.showWakeWord();
+                    break;
+                case 'processing':
+                    window.rupertOverlay.showProcessing('test command');
+                    break;
+                case 'success':
+                    window.rupertOverlay.showSuccess('Test successful!');
+                    break;
+                case 'error':
+                    window.rupertOverlay.showError('Test error occurred');
+                    break;
+            }
+
+            console.log('🎭 Overlay test - showing:', nextState);
+        }
+    }
+
+    // Alt+Shift+H - Hide overlay
+    if (event.altKey && event.shiftKey && event.key === 'H') {
+        event.preventDefault();
+        if (window.rupertOverlay) {
+            window.rupertOverlay.hide();
+            console.log('🎭 Overlay hidden via keyboard shortcut');
+        }
+    }
+});
+
+console.log('🎭 Enhanced Rupert integration code loaded');

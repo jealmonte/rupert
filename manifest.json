@@ -34,8 +34,14 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["config.js", "enhanced_command_processor.js", "enhanced_speech_recognition_config.js", "wake-word-detector.js", "content.js"],
-      "css": ["styles.css"],
+      "js": ["config.js", 
+      "enhanced_command_processor.js", 
+      "enhanced_speech_recognition_config.js", 
+      "wake-word-detector.js",
+      "command-overlay.js", 
+      "content.js"],
+      "css": ["styles.css", 
+      "command-overlay.css"],
       "run_at": "document_idle"
     }
   ],
@@ -50,6 +56,9 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "command-overlay.html", 
+        "command-overlay.css",        
+        "command-overlay.js",  
         "config/env.json",
         "*.png"
       ],
